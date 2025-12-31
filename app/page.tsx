@@ -130,7 +130,7 @@ export default function Page() {
       {/* Header */}
       <header className="fixed top-7 left-0 right-0 z-50 bg-transparent">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="text-3xl font-bold tracking-tight">CBS.</div>
+          <div className="text-3xl font-bold tracking-tight">EventGate</div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium absolute left-1/2 -translate-x-1/2">
             <button 
