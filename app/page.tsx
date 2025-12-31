@@ -60,6 +60,13 @@ export default function Page() {
   useGSAP(() => {
       // Handle Menu Text vs Forms (Join/Status)
       if (['join', 'status'].includes(clubView)) {
+          gsap.from(".anim-form", {
+              y: 20,
+              opacity: 0,
+              duration: 0.6,
+              stagger: 0.1,
+              ease: "power2.out"
+          });
       } else if (clubView === 'menu') {
           gsap.from(".anim-text", {
               y: 30,
@@ -204,7 +211,13 @@ export default function Page() {
                 </>
               ) : (
                 <div className="w-full max-w-md ml-5">
-
+                  <button 
+                      onClick={() => setAdminView('intro')}
+                      className="anim-admin-form mb-8 text-gray-500 hover:text-black transition-colors flex items-center gap-2"
+                  >
+                      <ArrowLeft size={20} />
+                      <span className="text-sm tracking-wide">HOME</span>
+                  </button>
 
                   <div className="space-y-6">
                     {/* SELECT CLUB VIEW */}
