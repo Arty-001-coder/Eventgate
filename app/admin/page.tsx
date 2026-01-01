@@ -105,7 +105,7 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-bold tracking-tight mb-8">DASHBOARD</h1>
         
         {/* Bento Grid Navigation */}
-        <div className="grid grid-cols-2 grid-rows-[1fr_1fr_auto] gap-4 h-[450px]">
+        <div className="grid grid-cols-2 grid-rows-[1.5fr_1fr_auto] gap-4 h-[450px]">
              {/* Rolled Events - Big Vertical Block */}
              <button 
                 onClick={() => setActiveTab('events')}
