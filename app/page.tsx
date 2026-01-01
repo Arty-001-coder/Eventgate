@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { Eye, EyeOff, ChevronRight, ArrowLeft } from 'lucide-react';
@@ -8,11 +9,13 @@ import { Eye, EyeOff, ChevronRight, ArrowLeft } from 'lucide-react';
 gsap.registerPlugin(useGSAP);
 
 export default function Page() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'clubs' | 'admin'>('clubs');
   /* State for Navigation */
   const [clubView, setClubView] = useState<'menu' | 'join' | 'create' | 'status'>('menu');
   const [adminView, setAdminView] = useState<'intro' | 'select-club' | 'auth-method' | 'existing-admin' | 'new-admin'>('intro');
   const [showSecret, setShowSecret] = useState(false);
+  const [clubNameInput, setClubNameInput] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   /* State for Status Toggle */
@@ -304,7 +307,7 @@ export default function Page() {
                                 >
                                     BACK
                                 </button>
-                                <button className="w-2/3 py-3 bg-black border border-black text-white hover:bg-white hover:text-black transition-all duration-300 text-sm font-bold tracking-wide">
+                                <button className="w-2/3 py-3 bg-black border border-black text-white hover:bg-white hover:text-black transition-all duration-300 text-sm font-bold tracking-wide" onClick={() => router.push('/admin')}>
                                     ACCESS ADMIN PAGE
                                 </button>
                             </div>
@@ -390,6 +393,8 @@ export default function Page() {
                                 <input 
                                     type="text" 
                                     placeholder="Name" 
+                                    value={clubNameInput}
+                                    onChange={(e) => setClubNameInput(e.target.value)}
                                     className="w-full bg-transparent border-b border-white py-2 text-lg focus:border-orange-500 outline-none transition-colors placeholder:text-gray-500 text-white"
                                 />
                             </div>
@@ -414,7 +419,7 @@ export default function Page() {
                                 </button>
                             </div>
                             <div className="anim-form pt-4">
-                                <button className="w-full py-3 bg-orange-600 border border-orange-600 rounded text-white shadow-[0_0_15px_rgba(234,88,12,0.5)] hover:shadow-[0_0_25px_rgba(234,88,12,0.8)] hover:bg-orange-500 transition-all duration-300 text-sm font-bold tracking-wide">
+                                <button className="w-full py-3 bg-orange-600 border border-orange-600 rounded text-white shadow-[0_0_15px_rgba(234,88,12,0.5)] hover:shadow-[0_0_25px_rgba(234,88,12,0.8)] hover:bg-orange-500 transition-all duration-300 text-sm font-bold tracking-wide" onClick={() => router.push(`/club/${clubNameInput}`)}>
                                     ACCESS NETWORK
                                 </button>
                             </div>
