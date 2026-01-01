@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import eventsData from '../../admin/events.json';
-import { Calendar, Users, Bell } from 'lucide-react';
+import { Calendar, Users, Bell, ChevronLeft, Plus, FileText, LogOut } from 'lucide-react';
 
 const NUM_ORANGE_DOTS = 27;
 
@@ -42,6 +42,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
   });
   
   const [nextEventId, setNextEventId] = React.useState(13);
+  const [activeMobileTab, setActiveMobileTab] = React.useState<'menu' | 'create' | 'logs'>('menu');
 
   React.useEffect(() => {
     // Generate a grid of dots (e.g., roughly enough to cover screen)
@@ -103,6 +104,36 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
     );
 
   }, { scope: containerRef });
+
+  // Mobile Tab Animations
+  useGSAP(() => {
+    if (activeMobileTab === 'create') {
+      gsap.fromTo(".anim-form", 
+        { y: 20, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.6,
+          stagger: 0.1,
+          ease: "power2.out",
+          clearProps: "all"
+        }
+      );
+    } 
+    else if (activeMobileTab === 'logs') {
+      gsap.fromTo(".anim-logs", 
+        { y: 20, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.6,
+          stagger: 0.1,
+          ease: "power2.out",
+          clearProps: "all"
+        }
+      );
+    }
+  }, { scope: containerRef, dependencies: [activeMobileTab] });
 
   // Animate newly added events
   useGSAP(() => {
@@ -226,30 +257,107 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
       </div>
 
       {/* 1. Header Row */}
-      <header className="anim-header w-full px-8 py-6 flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-8">
+      <header className="anim-header w-full px-4 py-4 md:px-8 md:py-6 flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-3 md:gap-8">
               {/* Roll Number */}
-              <div className="px-5 py-2 bg-white rounded-full text-xs font-bold font-mono tracking-widest text-black">
+              <div className="px-3 py-1.5 md:px-5 md:py-2 bg-white rounded-full text-[10px] md:text-xs font-bold font-mono tracking-widest text-black">
                   IMS22415
               </div>
               {/* Club Name */}
-              <h1 className="text-2xl font-bold tracking-tight text-white uppercase">
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white uppercase">
                   {resolvedParams.id}
               </h1>
           </div>
 
-          <button className="flex items-center gap-2 px-6 py-2 bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold rounded-xl transition-colors tracking-wide" onClick={() => router.push(`/club/${resolvedParams.id}/monitor`)}>
-              <Users size={16} />
-              CONNECTIONS
-          </button>
+          <div className="flex items-center gap-3">
+              {/* Mobile Calendar Button */}
+              <button 
+                  onClick={() => router.push('/club/calender')}
+                  className="md:hidden w-10 h-10 bg-white rounded-full flex items-center justify-center text-black hover:bg-gray-200 transition-colors"
+              >
+                  <Calendar size={20} />
+              </button>
+
+              <button className="hidden md:flex items-center justify-center gap-2 w-10 h-10 md:w-auto md:h-auto md:px-6 md:py-2 bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold rounded-full md:rounded-xl transition-colors tracking-wide" onClick={() => router.push(`/club/${resolvedParams.id}/monitor`)}>
+                  <Users size={20} className="md:w-4 md:h-4" />
+                  <span className="hidden md:inline">CONNECTIONS</span>
+              </button>
+
+              {/* Desktop Logout Button */}
+              <button 
+                  onClick={() => router.push('/')}
+                  className="hidden md:flex w-10 h-10 bg-white rounded-full items-center justify-center text-black hover:bg-gray-200 transition-colors"
+                  title="Logout"
+              >
+                  <LogOut size={20} />
+              </button>
+          </div>
       </header>
+      
+      {/* Mobile Menu View (Bento Grid) */}
+      <div className={`${activeMobileTab === 'menu' ? 'flex' : 'hidden'} md:hidden flex-1 flex-col justify-center gap-8 p-6 relative z-10`}>
+          <h2 className="text-3xl font-bold tracking-tight text-center uppercase">Club Dashboard</h2>
+          
+          <div className="grid grid-cols-2 gap-4 w-full aspect-square max-w-[400px] mx-auto">
+                {/* Create Event - Big Orange Button */}
+                <button 
+                    onClick={() => setActiveMobileTab('create')}
+                    className="row-span-2 bg-orange-600 rounded-3xl flex flex-col justify-between p-6 shadow-lg shadow-orange-900/20 active:scale-95 transition-all group"
+                >
+                    <div className="self-end">
+                        <Plus size={32} className="text-black" />
+                    </div>
+                    <span className="text-2xl font-bold tracking-tighter leading-none text-left text-black">Create Event</span>
+                </button>
+                
+                {/* Event Logs - White Button */}
+                <button 
+                    onClick={() => setActiveMobileTab('logs')}
+                    className="bg-white rounded-3xl flex flex-col justify-between p-6 shadow-lg active:scale-95 transition-all"
+                >
+                    <div className="self-end">
+                        <FileText size={24} className="text-black" />
+                    </div>
+                    <span className="text-sm font-bold tracking-tight text-left text-black leading-tight">Event Logs</span>
+                </button>
+
+                {/* Connections - Transparent Button */}
+                <button 
+                    onClick={() => router.push(`/club/${resolvedParams.id}/monitor`)}
+                    className="bg-transparent border border-white/30 rounded-3xl flex flex-col justify-between p-6 active:bg-white/10 active:scale-95 transition-all"
+                >
+                    <div className="self-end">
+                         <Users size={24} className="text-white" />
+                    </div>
+                    <span className="text-sm font-bold tracking-tight text-left text-white leading-tight">Connections</span>
+                </button>
+          </div>
+
+          {/* Mobile Logout Button */}
+          <button 
+              onClick={() => router.push('/')}
+              className="w-full max-w-[400px] mx-auto py-4 bg-transparent border border-orange-600 rounded-2xl flex items-center justify-center gap-2 hover:bg-orange-600/10 active:scale-95 transition-all text-white font-bold tracking-widest"
+          >
+              <LogOut size={20} />
+              LOGOUT
+          </button>
+      </div>
 
 
       {/* Main Content Split */}
       <main className="flex-1 grid grid-cols-1 md:grid-cols-2 h-full relative z-10">
           
           {/* 2. Left Panel: Create Event Form */}
-          <div className="p-12 md:p-16 flex flex-col justify-center border-r border-white/10 relative">
+          <div className={`${activeMobileTab === 'create' ? 'flex' : 'hidden'} md:flex p-6 md:p-16 flex-col justify-center border-r border-white/10 relative`}>
+              {/* Back Button (Mobile) */}
+              <button 
+                  onClick={() => setActiveMobileTab('menu')}
+                  className="md:hidden mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors self-start"
+              >
+                  <ChevronLeft size={20} />
+                  <span className="text-sm font-bold tracking-wide">BACK TO MENU</span>
+              </button>
+
               <div className="max-w-xl w-full mx-auto space-y-12">
                   <div className="anim-form">
                       <h2 className="text-4xl font-bold mb-2">CREATE EVENT</h2>
@@ -267,7 +375,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                                 value={formData.eventName}
                                 onChange={handleInputChange}
                                 placeholder="e.g. Hackathon 2024" 
-                                className="w-full bg-transparent border-b border-white py-3 text-xl focus:border-orange-600 outline-none transition-colors placeholder:text-gray-700 font-medium"
+                                className="w-full bg-transparent border border-white rounded-xl px-4 py-3 md:border-b md:border-x-0 md:border-t-0 md:rounded-none md:px-0 text-xl focus:border-orange-600 outline-none transition-colors placeholder:text-gray-700 font-medium"
                                 required
                             />
                        </div>
@@ -281,7 +389,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                                     name="startTime"
                                     value={formData.startTime}
                                     onChange={handleInputChange}
-                                    className="w-full bg-transparent border-b border-white py-3 text-xl focus:border-orange-600 outline-none transition-colors font-medium text-white scheme:dark"
+                                    className="w-full bg-transparent border border-white rounded-xl px-4 py-3 md:border-b md:border-x-0 md:border-t-0 md:rounded-none md:px-0 text-xl focus:border-orange-600 outline-none transition-colors font-medium text-white [color-scheme:dark]"
                                     required
                                 />
                             </div>
@@ -292,7 +400,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                                     name="endTime"
                                     value={formData.endTime}
                                     onChange={handleInputChange}
-                                    className="w-full bg-transparent border-b border-white py-3 text-xl focus:border-orange-600 outline-none transition-colors font-medium text-white scheme:dark"
+                                    className="w-full bg-transparent border border-white rounded-xl px-4 py-3 md:border-b md:border-x-0 md:border-t-0 md:rounded-none md:px-0 text-xl focus:border-orange-600 outline-none transition-colors font-medium text-white [color-scheme:dark]"
                                 />
                             </div>
                        </div>
@@ -305,8 +413,8 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                                 name="date"
                                 value={formData.date}
                                 onChange={handleInputChange}
-                                className="w-full bg-transparent border-b border-white py-3 text-xl focus:border-orange-600 outline-none transition-colors font-medium text-white scheme:dark"
                                 required
+                                className="w-full bg-transparent border border-white rounded-xl px-4 py-3 md:border-b md:border-x-0 md:border-t-0 md:rounded-none md:px-0 text-xl focus:border-orange-600 outline-none transition-colors font-medium text-white [color-scheme:dark]"
                             />
                        </div>
 
@@ -328,7 +436,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                        <div className="anim-form pt-4">
                            <button 
                                type="submit"
-                               className="w-full py-4 bg-black border border-white text-white rounded-xl font-bold text-sm tracking-widest hover:bg-white hover:text-black transition-all duration-300"
+                               className="w-full py-4 bg-white text-black md:bg-transparent md:border md:border-white md:text-white rounded-xl font-bold text-sm tracking-widest hover:bg-gray-200 md:hover:bg-white md:hover:text-black transition-all duration-300"
                            >
                                PUBLISH EVENT REQUEST
                            </button>
@@ -339,8 +447,18 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
 
 
           {/* 3. Right Panel: Event Logs */}
-          <div className="p-8 md:p-12 h-full flex flex-col">
+          <div className={`${activeMobileTab === 'logs' ? 'flex' : 'hidden'} md:flex p-4 md:p-12 h-full flex-col`}>
              <div className="bg-linear-to-br from-white/5 via-black to-white/5 rounded-2xl p-10 flex flex-col relative overflow-hidden border border-white/7 h-[800px]">
+                 
+                 {/* Back Button (Mobile) */}
+                 <button 
+                    onClick={() => setActiveMobileTab('menu')}
+                    className="md:hidden mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors relative z-20 self-start"
+                 >
+                    <ChevronLeft size={20} />
+                    <span className="text-sm font-bold tracking-wide">BACK TO MENU</span>
+                 </button>
+
                  <div className="absolute top-0 right-0 p-12">
                     <div className="w-32 h-32 bg-orange-600/20 blur-[80px] rounded-full point-events-none"></div>
                  </div>
@@ -397,7 +515,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                  </div>
 
                  {/* Footer Actions */}
-                 <div className="anim-logs mt-8 pt-6 border-t border-white/10 flex justify-end relative z-10">
+                 <div className="hidden md:flex anim-logs mt-8 pt-6 border-t border-white/10 justify-end relative z-10">
                      <button 
                          onClick={() => router.push('/club/calender')}
                          className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-white transition-colors"

@@ -3,7 +3,8 @@
 import React, { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Shield, Users, UserPlus, Check, X, Lock } from 'lucide-react';
+import { Shield, Users, UserPlus, Check, X, Lock, ChevronLeft } from 'lucide-react';
+import { useRouter, useParams } from 'next/navigation';
 import eventsData from '../../../admin/events.json';
 
 const NUM_ORANGE_DOTS = 27;
@@ -11,6 +12,8 @@ const NUM_ORANGE_DOTS = 27;
 gsap.registerPlugin(useGSAP);
 
 export default function ClubMonitorPage() {
+  const router = useRouter();
+  const params = useParams();
   const containerRef = useRef<HTMLDivElement>(null);
   const [dots, setDots] = React.useState<{id: number, isOrange: boolean}[]>([]);
   
@@ -116,6 +119,12 @@ export default function ClubMonitorPage() {
               {/* Header */}
               <header className="anim-dashboard w-full px-8 py-6 border-b border-white/10">
                   <div className="flex items-center gap-4">
+                      <button 
+                          onClick={() => router.push(`/club/${params.id}`)}
+                          className="p-2 mr-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white relative z-20"
+                      >
+                          <ChevronLeft size={24} />
+                      </button>
                       <Shield className="text-orange-600" />
                       <h1 className="text-xl font-bold tracking-widest uppercase">Admin Monitor</h1>
                   </div>

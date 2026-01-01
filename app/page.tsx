@@ -148,11 +148,11 @@ export default function Page() {
       {/* Header */}
       <header className="fixed top-7 left-0 right-0 z-50 bg-transparent">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="text-3xl font-bold tracking-tight">
+          <div className="text-xl md:text-3xl font-bold tracking-tight">
             Event<span className="text-orange-600">Gate</span>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium absolute left-1/2 -translate-x-1/2">
+          <nav className="flex items-center gap-6 md:gap-8 text-sm font-medium absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
             <button 
               onClick={() => { setActiveTab('clubs'); setClubView('menu'); }}
               className={`pb-1 transition-all duration-300 ${
@@ -175,8 +175,6 @@ export default function Page() {
             </button>
           </nav>
 
-
-
           {/* Credits Trigger */}
           <button 
              onClick={() => setShowCredits(true)}
@@ -185,12 +183,6 @@ export default function Page() {
              }`}
           >
               <Grip size={20} />
-          </button>
-
-          <button className="md:hidden flex flex-col gap-1.5 pl-4">
-            <span className={`block w-6 h-0.5 transition-colors ${activeTab === 'clubs' ? 'bg-white' : 'bg-black'}`}></span>
-            <span className={`block w-6 h-0.5 transition-colors ${activeTab === 'clubs' ? 'bg-white' : 'bg-black'}`}></span>
-            <span className={`block w-6 h-0.5 transition-colors ${activeTab === 'clubs' ? 'bg-white' : 'bg-black'}`}></span>
           </button>
         </div>
       </header>
@@ -386,7 +378,7 @@ export default function Page() {
         <section className="relative bg-black text-white pt-32 pb-20 px-6 overflow-hidden min-h-screen flex items-center">
           <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
             {/* Content */}
-            <div className="space-y-6 h-full flex flex-col justify-center">
+            <div className="space-y-6 h-full flex flex-col justify-center order-2 md:order-1">
               
               {clubView === 'menu' ? (
                 <>
@@ -650,7 +642,7 @@ export default function Page() {
             </div>
 
             {/* Clubs Image */}
-            <div className="relative">
+            <div className="relative order-1 md:order-2">
               <div className="anim-image">
                 <Image
                   src="/landingPage/club.png"
