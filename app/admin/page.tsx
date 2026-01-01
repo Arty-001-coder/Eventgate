@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import React, { useRef, useState } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { CalendarDays, ShieldCheck, UserPlus, LogOut, Check, X, Mail, MapPin } from 'lucide-react';
+import { CalendarDays, ShieldCheck, UserPlus, LogOut, Check, X, Mail, MapPin, ArrowRight } from 'lucide-react';
 import eventsData from './events.json';
 
 gsap.registerPlugin(useGSAP);
@@ -198,7 +198,9 @@ export default function AdminDashboard() {
                                                     <p className="text-gray-600 text-sm max-w-xl">{evt.desc}</p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <span className="block text-3xl font-bold">{evt.time}</span>
+                                                    <span className="flex items-center gap-2 text-3xl font-bold">
+                                                        {evt.time} <ArrowRight className="text-orange-600" size={24} strokeWidth={3} /> {evt.endTime}
+                                                    </span>
                                                 </div>
                                             </div>
 

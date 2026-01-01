@@ -4,7 +4,8 @@ import React, { useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Calendar, Users } from 'lucide-react';
+import eventsData from '../../admin/events.json';
+import { Calendar, Users, Bell } from 'lucide-react';
 
 const NUM_ORANGE_DOTS = 27;
 
@@ -17,6 +18,7 @@ type EventLog = {
   date: string;
   time: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  notification?: string | null;
 };
 
 export default function ClubPage({ params }: { params: Promise<{ id: string }> }) {
@@ -34,21 +36,9 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
     description: ''
   });
   
-  // Event logs state - combine dummy data with new events
+  // Event logs state - initialize from events.json
   const [eventLogs, setEventLogs] = React.useState<EventLog[]>(() => {
-    // Initialize with dummy data
-    return Array.from({ length: 12 }, (_, i) => {
-      const item = i + 1;
-      const status = item % 3 === 0 ? 'REJECTED' : item % 3 === 1 ? 'APPROVED' : 'PENDING';
-      return {
-        id: item,
-        eventName: `Coding Workshop ${item}`,
-        description: 'Introduction to advanced React patterns and performance optimization techniques.',
-        date: `OCT ${10 + item}`,
-        time: '10:00 AM',
-        status: status as 'PENDING' | 'APPROVED' | 'REJECTED'
-      };
-    });
+    return (eventsData.eventLogs || []) as EventLog[];
   });
   
   const [nextEventId, setNextEventId] = React.useState(13);
@@ -369,14 +359,30 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
                      {eventLogs.map((event, index) => (
                          <div key={event.id} className={`${index === 0 ? 'anim-new-event' : 'anim-logs'} p-6 bg-linear-to-br from-white/5 via-black to-white/5 rounded-2xl border border-white/5 hover:border-orange-600 transition-all group`}>
                              <div className="flex justify-between items-start mb-2">
-                                 <h3 className="font-bold text-lg group-hover:text-orange-500 transition-colors">{event.eventName}</h3>
-                                 <span className={`text-xs px-3 py-1 rounded font-bold tracking-wider ${
-                                     event.status === 'APPROVED' ? 'bg-orange-600 text-white' : 
-                                     event.status === 'REJECTED' ? 'bg-white text-black' : 
-                                     'bg-black text-white border border-white'
-                                 }`}>
-                                     {event.status}
-                                 </span>
+                                 <div className="flex items-center gap-3">
+                                     <h3 className="font-bold text-lg group-hover:text-orange-500 transition-colors">{event.eventName}</h3>
+                                     {event.notification && (
+                                       <button 
+                                         onClick={(e) => {
+                                            e.stopPropagation();
+                                            alert(`Notification: ${event.notification}`);
+                                         }}
+                                         className="p-1.5 bg-orange-600/10 rounded-full text-orange-600 hover:bg-orange-600 hover:text-white transition-colors"
+                                         title="View Notification"
+                                       >
+                                          <Bell size={14} />
+                                       </button>
+                                    )}
+                                 </div>
+                                 <div className="flex items-center gap-4">
+                                     <span className={`px-3 py-1 rounded text-[10px] font-bold tracking-wider ${
+                                      event.status === 'APPROVED' ? 'bg-orange-600 text-white' : 
+                                      event.status === 'REJECTED' ? 'bg-white text-black' : 
+                                      'bg-transparent border border-white text-gray-300'
+                                    }`}>
+                                      {event.status}
+                                    </span>
+                                  </div>
                              </div>
                              <p className="text-gray-500 text-sm line-clamp-2 mb-4">
                                  {event.description}

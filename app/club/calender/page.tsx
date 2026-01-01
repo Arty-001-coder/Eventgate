@@ -4,7 +4,7 @@ import React, { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import eventsData from '../../admin/events.json';
-import { Calendar as CalendarIcon, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, MapPin, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 
 const NUM_ORANGE_DOTS = 27;
 
@@ -202,9 +202,9 @@ export default function CalendarPage() {
                                     <span className="text-3xl font-bold text-orange-600 uppercase">
                                         {event.club}
                                     </span>
-                                    <span className="text-3xl font-bold tracking-tighter text-white">
-                                        {event.time}
-                                    </span>
+                                     <span className="text-3xl font-bold tracking-tighter text-white flex items-center gap-2">
+                                         {event.time} <ArrowRight className="text-orange-600" size={24} strokeWidth={3} /> {event.endTime}
+                                     </span>
                                 </div>
                                 
                                 <h3 className="text-2xl font-bold mb-2 group-hover:text-orange-500 transition-colors">

@@ -6,6 +6,7 @@
       "event": "Hackathon 2024",
       "date": "Oct 15",
       "time": "10:00 AM",
+      "endTime": "10:00 PM",
       "venue": "Main Auditorium",
       "desc": "Annual 24-hour coding marathon for all years."
     },
@@ -15,6 +16,7 @@
       "event": "UI/UX Workshop",
       "date": "Oct 15",
       "time": "01:00 PM",
+      "endTime": "03:00 PM",
       "venue": "Lab 3",
       "desc": "Introduction to Figma and design principles."
     },
@@ -24,6 +26,7 @@
       "event": "Poetry Slam",
       "date": "Oct 15",
       "time": "04:00 PM",
+      "endTime": "06:00 PM",
       "venue": "Amphitheater",
       "desc": "Open mic event for poets and storytellers."
     },
@@ -33,6 +36,7 @@
       "event": "Jam Session",
       "date": "Oct 18",
       "time": "05:00 PM",
+      "endTime": "08:00 PM",
       "venue": "Student Lounge",
       "desc": "Live acoustic performance by university students."
     },
@@ -42,6 +46,7 @@
       "event": "Bot Wars",
       "date": "Oct 22",
       "time": "02:00 PM",
+      "endTime": "06:00 PM",
       "venue": "Engineering Block B",
       "desc": "Inter-college robot fighting championship."
     },
@@ -51,6 +56,7 @@
       "event": "Voice Out",
       "date": "Oct 25",
       "time": "04:30 PM",
+      "endTime": "06:30 PM",
       "venue": "Seminar Hall 1",
       "desc": "Open debate on current affairs and policies."
     },
@@ -60,6 +66,7 @@
       "event": "Canvas Day",
       "date": "Nov 02",
       "time": "11:00 AM",
+      "endTime": "02:00 PM",
       "venue": "Central Lawn",
       "desc": "Open air painting and sketching competition."
     },
@@ -69,6 +76,7 @@
       "event": "Hackathon 24",
       "date": "JAN 16",
       "time": "5:29 AM",
+      "endTime": "05:29 PM",
       "venue": "TBD",
       "desc": "meow"
     }
@@ -258,5 +266,52 @@
     { "id": 103, "name": "Kabir Das", "roll": "IMS2024012", "year": "1st Year", "timestamp": "Yesterday" },
     { "id": 104, "name": "Riya Singh", "roll": "IMS2024056", "year": "1st Year", "timestamp": "Yesterday" },
     { "id": 105, "name": "Aryan Gupta", "roll": "IMS2023012", "year": "2nd Year", "timestamp": "2 days ago" }
+  ],
+  "eventLogs": [
+    {
+      "id": 1,
+      "eventName": "React Workshop",
+      "description": "Introduction to React Hooks and Context API.",
+      "date": "OCT 12",
+      "time": "10:00 AM",
+      "status": "APPROVED",
+      "notification": null
+    },
+    {
+      "id": 2,
+      "eventName": "AI Seminar",
+      "description": "Guest lecture on future of AI.",
+      "date": "OCT 14",
+      "time": "02:00 PM",
+      "status": "REJECTED",
+      "notification": "Venue conflict: Auditorium is booked for Convocation."
+    },
+    {
+      "id": 3,
+      "eventName": "Coding Contest",
+      "description": "Inter-department coding challenge.",
+      "date": "OCT 18",
+      "time": "09:00 AM",
+      "status": "PENDING",
+      "notification": "Waiting for Dean's approval."
+    },
+    {
+      "id": 4,
+      "eventName": "Design Meetup",
+      "description": "UI/UX trends for 2024.",
+      "date": "OCT 20",
+      "time": "04:00 PM",
+      "status": "APPROVED",
+      "notification": "Approved. Please ensure AV equipment is requested."
+    },
+    {
+      "id": 5,
+      "eventName": "Tech Quiz",
+      "description": "Trivia on latest tech news.",
+      "date": "OCT 25",
+      "time": "11:00 AM",
+      "status": "REJECTED",
+      "notification": "Budget exceeds allocation for the month."
+    }
   ]
 }
