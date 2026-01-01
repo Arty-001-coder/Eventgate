@@ -242,5 +242,21 @@
       "rollNo": "IMS22422",
       "lastLogin": "1 week ago"
     }
+  ],
+  "clubUsers": [
+    { "id": 1, "name": "Aditya Sharma", "role": "Club Lead", "online": true, "lastLogin": "Active now" },
+    { "id": 2, "name": "Priya Patel", "role": "Event Coordinator", "online": true, "lastLogin": "Active now" },
+    { "id": 3, "name": "Rohan Gupta", "role": "Member", "online": false, "lastLogin": "2h ago" },
+    { "id": 4, "name": "Sanya Singh", "role": "Treasurer", "online": true, "lastLogin": "Active now" },
+    { "id": 5, "name": "Vikram Malhotra", "role": "Member", "online": false, "lastLogin": "1d ago" },
+    { "id": 6, "name": "Ananya Gupta", "role": "Tech Lead", "online": true, "lastLogin": "Active now" },
+    { "id": 7, "name": "Rahul Sharma", "role": "Member", "online": false, "lastLogin": "3d ago" }
+  ],
+  "joinRequests": [
+    { "id": 101, "name": "Arjun Kumar", "roll": "IMS2024001", "year": "1st Year", "timestamp": "10:30 AM" },
+    { "id": 102, "name": "Neha Verma", "roll": "IMS2023045", "year": "2nd Year", "timestamp": "11:15 AM" },
+    { "id": 103, "name": "Kabir Das", "roll": "IMS2024012", "year": "1st Year", "timestamp": "Yesterday" },
+    { "id": 104, "name": "Riya Singh", "roll": "IMS2024056", "year": "1st Year", "timestamp": "Yesterday" },
+    { "id": 105, "name": "Aryan Gupta", "roll": "IMS2023012", "year": "2nd Year", "timestamp": "2 days ago" }
   ]
 }

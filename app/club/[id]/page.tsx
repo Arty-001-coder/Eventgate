@@ -248,7 +248,7 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
               </h1>
           </div>
 
-          <button className="flex items-center gap-2 px-6 py-2 bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold rounded-xl transition-colors tracking-wide">
+          <button className="flex items-center gap-2 px-6 py-2 bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold rounded-xl transition-colors tracking-wide" onClick={() => router.push(`/club/${resolvedParams.id}/monitor`)}>
               <Users size={16} />
               CONNECTIONS
           </button>
