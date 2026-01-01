@@ -86,7 +86,7 @@ export default function ClubMonitorPage() {
       {!isAuthenticated ? (
           // LOGIN OVERLAY
           <div className="flex-1 flex flex-col items-center justify-center relative z-10 p-4">
-              <div className="max-w-md w-full bg-black border border-white/20 p-8 rounded-2xl md:p-12 anim-auth">
+              <div className="max-w-md w-full bg-black border border-white/20 p-6 md:p-12 rounded-2xl anim-auth">
                   <div className="flex justify-center mb-6">
                       <div className="p-4 bg-orange-600/10 rounded-full text-orange-600">
                           <Lock size={32} />
@@ -117,7 +117,7 @@ export default function ClubMonitorPage() {
           // DASHBOARD
           <div className="flex-1 flex flex-col relative z-10">
               {/* Header */}
-              <header className="anim-dashboard w-full px-8 py-6 border-b border-white/10">
+              <header className="anim-dashboard w-full px-4 py-4 md:px-8 md:py-6 border-b border-white/10">
                   <div className="flex items-center gap-4">
                       <button 
                           onClick={() => router.push(`/club/${params.id}`)}
@@ -133,14 +133,14 @@ export default function ClubMonitorPage() {
               <main className="flex-1 grid grid-cols-1 lg:grid-cols-2">
                   
                   {/* LEFT: Authorized Users */}
-                  <div className="p-8 md:p-12 border-r border-white/10 overflow-y-auto">
-                      <div className="anim-dashboard mb-8 flex items-center justify-between">
-                          <h2 className="text-2xl font-bold flex items-center gap-3">
+                  <div className="p-4 md:p-12 border-b md:border-b-0 md:border-r border-white/10 overflow-y-auto">
+                      <div className="anim-dashboard mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <h2 className="text-xl md:text-2xl font-bold flex flex-wrap items-center gap-3">
                               <Users className="text-gray-400" size={24} />
                               AUTHORIZED USERS
                               
                               {/* Online Indicator */}
-                              <div className="flex items-center gap-2 bg-white/5 px-5 py-3 ml-4 rounded-full border border-white/10">
+                              <div className="flex items-center gap-2 bg-white/5 px-4 py-2 md:px-5 md:py-3 ml-0 md:ml-4 rounded-full border border-white/10 mt-2 sm:mt-0">
                                   <span className="relative flex h-3 w-3">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-600 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-600"></span>
@@ -174,9 +174,9 @@ export default function ClubMonitorPage() {
                   </div>
 
                   {/* RIGHT: Join Requests */}
-                  <div className="p-8 md:p-12 bg-white/5 h-full overflow-y-auto">
-                      <div className="anim-dashboard mb-8 flex items-center justify-between">
-                          <h2 className="text-2xl font-bold flex items-center gap-3">
+                  <div className="p-4 md:p-12 bg-white/5 h-full overflow-y-auto">
+                      <div className="anim-dashboard mb-6 md:mb-8 flex items-center justify-between">
+                          <h2 className="text-xl md:text-2xl font-bold flex items-center gap-3">
                               <UserPlus className="text-gray-400" size={24} />
                               PENDING REQUESTS
                           </h2>
