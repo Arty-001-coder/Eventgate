@@ -1,18 +1,22 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Eye, EyeOff, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, ChevronRight, ArrowLeft, Grip, X } from 'lucide-react';
 
 gsap.registerPlugin(useGSAP);
 
 export default function Page() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'clubs' | 'admin'>('clubs');
   /* State for Navigation */
   const [clubView, setClubView] = useState<'menu' | 'join' | 'create' | 'status'>('menu');
   const [adminView, setAdminView] = useState<'intro' | 'select-club' | 'auth-method' | 'existing-admin' | 'new-admin'>('intro');
   const [showSecret, setShowSecret] = useState(false);
+  const [showCredits, setShowCredits] = useState(false);
+  const [clubNameInput, setClubNameInput] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   /* State for Status Toggle */
@@ -115,6 +119,20 @@ export default function Page() {
        });
     }
   }, { scope: containerRef, dependencies: [clubView, statusMode] });
+
+  // Credits Animation
+  useGSAP(() => {
+    if (showCredits) {
+       gsap.from(".anim-credit-item", {
+          y: 30,
+          opacity: 0,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: "power3.out",
+          delay: 0.1
+       });
+    }
+  }, { scope: containerRef, dependencies: [showCredits] });
   
   const handleMenuClick = (item: string) => {
     if (item === 'Join network') setClubView('join');
@@ -130,7 +148,9 @@ export default function Page() {
       {/* Header */}
       <header className="fixed top-7 left-0 right-0 z-50 bg-transparent">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="text-3xl font-bold tracking-tight">EventGate</div>
+          <div className="text-3xl font-bold tracking-tight">
+            Event<span className="text-orange-600">Gate</span>
+          </div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium absolute left-1/2 -translate-x-1/2">
             <button 
@@ -155,7 +175,19 @@ export default function Page() {
             </button>
           </nav>
 
-          <button className="md:hidden flex flex-col gap-1.5">
+
+
+          {/* Credits Trigger */}
+          <button 
+             onClick={() => setShowCredits(true)}
+             className={`p-2 rounded-full transition-colors ${
+                 activeTab === 'clubs' ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-black'
+             }`}
+          >
+              <Grip size={20} />
+          </button>
+
+          <button className="md:hidden flex flex-col gap-1.5 pl-4">
             <span className={`block w-6 h-0.5 transition-colors ${activeTab === 'clubs' ? 'bg-white' : 'bg-black'}`}></span>
             <span className={`block w-6 h-0.5 transition-colors ${activeTab === 'clubs' ? 'bg-white' : 'bg-black'}`}></span>
             <span className={`block w-6 h-0.5 transition-colors ${activeTab === 'clubs' ? 'bg-white' : 'bg-black'}`}></span>
@@ -304,7 +336,7 @@ export default function Page() {
                                 >
                                     BACK
                                 </button>
-                                <button className="w-2/3 py-3 bg-black border border-black text-white hover:bg-white hover:text-black transition-all duration-300 text-sm font-bold tracking-wide">
+                                <button className="w-2/3 py-3 bg-black border border-black text-white hover:bg-white hover:text-black transition-all duration-300 text-sm font-bold tracking-wide" onClick={() => router.push('/admin')}>
                                     ACCESS ADMIN PAGE
                                 </button>
                             </div>
@@ -390,6 +422,8 @@ export default function Page() {
                                 <input 
                                     type="text" 
                                     placeholder="Name" 
+                                    value={clubNameInput}
+                                    onChange={(e) => setClubNameInput(e.target.value)}
                                     className="w-full bg-transparent border-b border-white py-2 text-lg focus:border-orange-500 outline-none transition-colors placeholder:text-gray-500 text-white"
                                 />
                             </div>
@@ -414,7 +448,7 @@ export default function Page() {
                                 </button>
                             </div>
                             <div className="anim-form pt-4">
-                                <button className="w-full py-3 bg-orange-600 border border-orange-600 rounded text-white shadow-[0_0_15px_rgba(234,88,12,0.5)] hover:shadow-[0_0_25px_rgba(234,88,12,0.8)] hover:bg-orange-500 transition-all duration-300 text-sm font-bold tracking-wide">
+                                <button className="w-full py-3 bg-orange-600 border border-orange-600 rounded text-white shadow-[0_0_15px_rgba(234,88,12,0.5)] hover:shadow-[0_0_25px_rgba(234,88,12,0.8)] hover:bg-orange-500 transition-all duration-300 text-sm font-bold tracking-wide" onClick={() => router.push(`/club/${clubNameInput}`)}>
                                     ACCESS NETWORK
                                 </button>
                             </div>
@@ -639,6 +673,38 @@ export default function Page() {
         </section>
       )}
 
+      {/* Credits Overlay */}
+      {showCredits && (
+          <div className="fixed inset-0 z-[100] backdrop-blur-xl bg-black/90 flex flex-col items-center justify-center text-center p-8 animate-in fade-in duration-300">
+              <button 
+                  onClick={() => setShowCredits(false)}
+                  className="absolute top-8 right-8 text-white/50 hover:text-white transition-colors"
+                  aria-label="Close"
+              >
+                  <X size={32} />
+              </button>
+              
+              <div className="space-y-8 max-w-2xl">
+                  <div className="space-y-2">
+                       <p className="anim-credit-item text-gray-400 text-sm tracking-[0.2em] font-light">DESIGNED AND CREATED BY</p>
+                       <h2 className="anim-credit-item text-6xl md:text-8xl font-black tracking-tighter text-white">
+                           <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">CCIT</span>
+                       </h2>
+                  </div>
+
+                  <div className="anim-credit-item w-16 h-1 bg-white/10 mx-auto rounded-full"></div>
+
+                  <div className="space-y-4">
+                      <p className="anim-credit-item text-gray-400 text-xs tracking-[0.2em] uppercase">Contributors</p>
+                      <div className="anim-credit-item flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-xl md:text-2xl font-bold text-white">
+                          <span className="hover:text-orange-500 transition-colors cursor-default">ANTRIN MAJI</span>
+                          <span className="hidden md:block text-orange-600/30 text-sm">•</span>
+                          <span className="hover:text-orange-500 transition-colors cursor-default">AYUSH SIDDHA</span>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   )
 }
