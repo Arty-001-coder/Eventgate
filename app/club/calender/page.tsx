@@ -199,7 +199,7 @@ export default function CalendarPage() {
                        filteredEvents.map((event) => (
                            <div key={event.id} className="anim-event-card p-6 bg-black border border-white rounded-xl hover:border-orange-600 transition-colors group">
                                 <div className="flex justify-between items-start mb-4">
-                                    <span className="text-3xl font-bold tracking-tight text-orange-600 uppercase">
+                                    <span className="text-3xl font-bold text-orange-600 uppercase">
                                         {event.club}
                                     </span>
                                     <span className="text-3xl font-bold tracking-tighter text-white">
