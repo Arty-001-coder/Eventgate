@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import React, { useRef, useState } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { CalendarDays, ShieldCheck, UserPlus, LogOut, Check, X, Mail, MapPin, ArrowRight } from 'lucide-react';
+import { CalendarDays, ShieldCheck, UserPlus, LogOut, Check, X, Mail, MapPin, ArrowRight, ChevronLeft } from 'lucide-react';
 import eventsData from './events.json';
 
 gsap.registerPlugin(useGSAP);
@@ -22,6 +22,7 @@ export default function AdminDashboard() {
   const [registrationTab, setRegistrationTab] = useState<'clubs' | 'admins'>('clubs');
   const [orangeDots, setOrangeDots] = useState<{r: number, c: number}[]>([]);
   const [modalOpen, setModalOpen] = useState<{type: 'reject' | 'contact', eventId: number} | null>(null);
+  const [mobileView, setMobileView] = useState<'menu' | 'content'>('menu');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Group events by date
@@ -83,7 +84,8 @@ export default function AdminDashboard() {
     <div ref={containerRef} className="h-screen bg-white text-black font-sans flex overflow-hidden">
       
       {/* LEFT PANEL - Navigation (30%) */}
-      <div className="w-[30%] h-full p-8 border-r border-gray-100 flex flex-col justify-center relative overflow-hidden">
+      {/* LEFT PANEL - Navigation (30% on desktop, 100% on mobile menu view) */}
+      <div className={`${mobileView === 'content' ? 'hidden md:flex' : 'flex'} w-full md:w-[30%] h-full p-8 border-r border-gray-100 flex-col justify-center relative overflow-hidden transition-all duration-300`}>
         {/* Background Pattern */}
         <div className="absolute inset-0 z-0 opacity-20" 
              style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
@@ -102,13 +104,18 @@ export default function AdminDashboard() {
         ))}
 
         <div className="relative z-10">
-            <h1 className="text-3xl font-bold tracking-tight mb-8">DASHBOARD</h1>
+            <div className="flex items-center justify-between mb-8">
+                <h1 className="text-3xl font-bold tracking-tight">DASHBOARD</h1>
+                <div className="px-4 py-1.5 bg-black rounded-full flex items-center justify-center text-white font-bold text-xs tracking-widest shadow-lg">
+                    IMS22415
+                </div>
+            </div>
         
         {/* Bento Grid Navigation */}
         <div className="grid grid-cols-2 grid-rows-[1.5fr_1fr_auto] gap-4 h-[450px]">
              {/* Rolled Events - Big Vertical Block */}
              <button 
-                onClick={() => setActiveTab('events')}
+                onClick={() => { setActiveTab('events'); setMobileView('content'); }}
                 className={`anim-bento row-span-2 rounded-3xl p-6 flex flex-col justify-between transition-colors duration-300 ${getTabStyle('events')}`}
              >
                 <div className="self-end">
@@ -122,7 +129,7 @@ export default function AdminDashboard() {
 
              {/* Authentications - Top Right Block */}
              <button 
-                onClick={() => setActiveTab('auth')}
+                onClick={() => { setActiveTab('auth'); setMobileView('content'); }}
                 className={`anim-bento rounded-3xl p-6 flex flex-col justify-between transition-colors duration-300 ${getTabStyle('auth')}`}
              >
                 <div className="self-end">
@@ -135,7 +142,7 @@ export default function AdminDashboard() {
 
              {/* Registrations - Bottom Right Block */}
              <button 
-                onClick={() => setActiveTab('registrations')}
+                onClick={() => { setActiveTab('registrations'); setMobileView('content'); }}
                 className={`anim-bento rounded-3xl p-6 flex flex-col justify-between transition-colors duration-300 ${getTabStyle('registrations')}`}
              >
                 <div className="self-end">
@@ -162,14 +169,22 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* RIGHT PANEL - Content (70%) */}
-      <div className="w-[70%] h-full bg-white p-12 pt-12 overflow-y-auto">
-         {/* Top Bar */}
-         <div className="flex justify-end mb-12">
+      {/* RIGHT PANEL - Content (70% on desktop, 100% on mobile content view) */}
+      <div className={`${mobileView === 'menu' ? 'hidden md:block' : 'block'} w-full md:w-[70%] h-full bg-white p-8 md:p-12 pt-8 md:pt-12 overflow-y-auto`}>
+         {/* Top Bar with Mobile Back Button */}
+         <div className="flex justify-between items-center mb-12">
+            <button 
+                onClick={() => setMobileView('menu')}
+                className="md:hidden p-2 -ml-2 hover:bg-gray-100 rounded-full text-black transition-colors"
+            >
+                <ChevronLeft size={28} />
+            </button>
+            <div className="flex-1 flex justify-end">
             <div className="flex items-center gap-6">
                 <div className="px-6 py-2 bg-black rounded-full flex items-center justify-center text-white font-bold text-sm tracking-widest shadow-lg">
                     IMS22415
                 </div>
+            </div>
             </div>
          </div>
 
@@ -188,17 +203,17 @@ export default function AdminDashboard() {
                                     {events.map((evt) => (
                                         <div key={evt.id} className="anim-tab-item p-6 border border-gray-200 rounded-2xl hover:border-black transition-all bg-white group hover:shadow-lg">
                                             {/* Header: Club & Event */}
-                                            <div className="flex justify-between items-start mb-4">
+                                            <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-4 gap-4 md:gap-0">
                                                 <div>
                                                     <div className="flex items-center gap-3 mb-1">
-                                                        <span className="font-bold text-xl">{evt.club}</span>
+                                                        <span className="font-bold text-xl md:text-2xl">{evt.club}</span>
                                                         <span className="w-1.5 h-1.5 bg-black rounded-full"></span>
                                                         <span className="text-sm font-bold text-orange-600 uppercase tracking-wide">{evt.event}</span>
                                                     </div>
                                                     <p className="text-gray-600 text-sm max-w-xl">{evt.desc}</p>
                                                 </div>
-                                                <div className="text-right">
-                                                    <span className="flex items-center gap-2 text-3xl font-bold">
+                                                <div className="text-left md:text-right">
+                                                    <span className="flex items-center gap-2 text-xl md:text-3xl font-bold">
                                                         {evt.time} <ArrowRight className="text-orange-600" size={24} strokeWidth={3} /> {evt.endTime}
                                                     </span>
                                                 </div>
@@ -213,21 +228,21 @@ export default function AdminDashboard() {
                                             </div>
 
                                             {/* Action Buttons */}
-                                            <div className="flex items-center gap-4">
-                                                <button className="px-6 py-2 bg-black text-white text-sm font-bold rounded-full hover:bg-zinc-800 transition-colors flex items-center gap-2">
-                                                    <Check size={16} /> ACCEPT
+                                            <div className="flex flex-row items-center gap-2 md:gap-4 overflow-x-auto no-scrollbar">
+                                                <button className="flex-1 md:flex-none justify-center px-4 md:px-6 py-2 bg-black text-white text-xs md:text-sm font-bold rounded-full hover:bg-zinc-800 transition-colors flex items-center gap-2 whitespace-nowrap">
+                                                    <Check size={14} className="md:w-4 md:h-4" /> ACCEPT
                                                 </button>
                                                 <button 
                                                     onClick={() => setModalOpen({type: 'reject', eventId: evt.id})}
-                                                    className="px-6 py-2 border border-black text-black text-sm font-bold rounded-full hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                                    className="flex-1 md:flex-none justify-center px-4 md:px-6 py-2 border border-black text-black text-xs md:text-sm font-bold rounded-full hover:bg-gray-50 transition-colors flex items-center gap-2 whitespace-nowrap"
                                                 >
-                                                    <X size={16} /> REJECT
+                                                    <X size={14} className="md:w-4 md:h-4" /> REJECT
                                                 </button>
                                                 <button 
                                                     onClick={() => setModalOpen({type: 'contact', eventId: evt.id})}
-                                                    className="px-6 py-2 text-gray-500 text-sm font-bold hover:text-black transition-colors flex items-center gap-2 ml-auto"
+                                                    className="flex-1 md:flex-none justify-center px-4 md:px-6 py-2 text-gray-500 text-xs md:text-sm font-bold hover:text-black transition-colors flex items-center gap-2 md:ml-auto whitespace-nowrap"
                                                 >
-                                                    <Mail size={16} /> CONTACT
+                                                    <Mail size={14} className="md:w-4 md:h-4" /> CONTACT
                                                 </button>
                                             </div>
                                         </div>
@@ -241,7 +256,7 @@ export default function AdminDashboard() {
 
              {activeTab === 'auth' && (
                  <div>
-                     <h2 className="anim-tab-item text-6xl font-bold tracking-tight mb-2">AUTHENTICATIONS</h2>
+                     <h2 className="anim-tab-item text-4xl md:text-6xl font-bold tracking-tight mb-2">AUTHENTICATIONS</h2>
                      <p className="anim-tab-item text-gray-500 text-xl font-light mb-8">Review pending admin access and club creation requests.</p>                      
                      <div className="space-y-12">
                         {/* Club Creation Requests */}
@@ -250,18 +265,26 @@ export default function AdminDashboard() {
                             <div className="space-y-4 ml-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                                 {authRequests.filter(req => req.type === 'club').map((req) => (
                                     <div key={req.id} className="anim-tab-item p-6 border border-gray-200 rounded-2xl bg-white hover:border-black transition-all flex items-center justify-between group">
-                                        <div className="text-xl font-medium leading-relaxed max-w-3xl">
-                                            Request to create <span className="text-orange-600 font-bold">{req.clubName}</span> network by <span className="text-orange-600 font-bold">{req.name}</span>, <span className="text-orange-600 font-bold">{req.rollNo}</span>
+                                        <div className="flex-1 mr-4">
+                                            <div className="text-xl font-medium leading-relaxed max-w-3xl">
+                                                Request to create <span className="text-orange-600 font-bold">{req.clubName}</span> network by <span className="text-orange-600 font-bold">{req.name}</span>, <span className="text-orange-600 font-bold">{req.rollNo}</span>
+                                            </div>
+                                            {/* Mobile Timestamp Layout */}
+                                            <div className="md:hidden mt-3 pt-3 border-t border-gray-100">
+                                                <span className="text-sm text-gray-400 font-medium">{req.timestamp}</span>
+                                            </div>
                                         </div>
                                         
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-sm text-gray-400 font-medium mr-4">{req.timestamp}</span>
-                                            <button className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors">
-                                                <Check size={20} />
-                                            </button>
-                                            <button className="w-10 h-10 border border-black text-black rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors">
-                                                <X size={20} />
-                                            </button>
+                                        <div className="flex items-center gap-2 md:gap-3">
+                                            <span className="hidden md:block text-sm text-gray-400 font-medium mr-4">{req.timestamp}</span>
+                                            <div className="flex flex-col gap-2 md:gap-3">
+                                                <button className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors">
+                                                    <Check size={20} />
+                                                </button>
+                                                <button className="w-10 h-10 border border-black text-black rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors">
+                                                    <X size={20} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -277,18 +300,26 @@ export default function AdminDashboard() {
                             <div className="space-y-4 ml-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                                 {authRequests.filter(req => req.type === 'admin').map((req) => (
                                     <div key={req.id} className="anim-tab-item p-6 border border-gray-200 rounded-2xl bg-white hover:border-black transition-all flex items-center justify-between group">
-                                        <div className="text-xl font-medium leading-relaxed max-w-3xl">
-                                            <span className="text-orange-600 font-bold">{req.name}</span>, <span className="text-orange-600 font-bold">{req.rollNo}</span> has requested to access admin page
+                                        <div className="flex-1 mr-4">
+                                            <div className="text-xl font-medium leading-relaxed max-w-3xl">
+                                                <span className="text-orange-600 font-bold">{req.name}</span>, <span className="text-orange-600 font-bold">{req.rollNo}</span> has requested to access admin page
+                                            </div>
+                                            {/* Mobile Timestamp Layout */}
+                                            <div className="md:hidden mt-3 pt-3 border-t border-gray-100">
+                                                <span className="text-sm text-gray-400 font-medium">{req.timestamp}</span>
+                                            </div>
                                         </div>
                                         
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-sm text-gray-400 font-medium mr-4">{req.timestamp}</span>
-                                            <button className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors">
-                                                <Check size={20} />
-                                            </button>
-                                            <button className="w-10 h-10 border border-black text-black rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors">
-                                                <X size={20} />
-                                            </button>
+                                        <div className="flex items-center gap-2 md:gap-3">
+                                            <span className="hidden md:block text-sm text-gray-400 font-medium mr-4">{req.timestamp}</span>
+                                            <div className="flex flex-col gap-2 md:gap-3">
+                                                <button className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-zinc-800 transition-colors">
+                                                    <Check size={20} />
+                                                </button>
+                                                <button className="w-10 h-10 border border-black text-black rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors">
+                                                    <X size={20} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -324,11 +355,11 @@ export default function AdminDashboard() {
 
                      <div className="mt-8">
                          {registrationTab === 'clubs' ? (
-                             <div className="grid grid-cols-2 gap-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {registeredClubs.map((club) => (
-                                     <div key={club.id} className="anim-tab-item p-8 border border-gray-200 rounded-3xl bg-white hover:border-black transition-all hover:shadow-lg flex flex-col justify-between h-40 group">
-                                         <div>
-                                             <h3 className="text-3xl font-bold tracking-tight mb-1 group-hover:text-orange-600 transition-colors">{club.name}</h3>
+                                     <div key={club.id} className="anim-tab-item p-8 border border-gray-200 rounded-3xl bg-white hover:border-black transition-all hover:shadow-lg flex flex-col justify-between h-auto min-h-[160px] group">
+                                         <div className="mb-4">
+                                             <h3 className="text-3xl font-bold tracking-tight mb-1 group-hover:text-orange-600 transition-colors break-words">{club.name}</h3>
                                          </div>
                                          <div className="flex items-center gap-2">
                                              <div className="w-2 h-2 bg-black rounded-full"></div>
@@ -338,16 +369,16 @@ export default function AdminDashboard() {
                                 ))}
                              </div>
                          ) : (
-                             <div className="grid grid-cols-2 gap-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {registeredAdmins.map((admin) => (
-                                     <div key={admin.id} className="anim-tab-item p-8 border border-gray-200 rounded-3xl bg-white hover:border-black transition-all hover:shadow-lg flex flex-col justify-between h-40 group">
-                                         <div>
-                                             <h3 className="text-2xl font-bold tracking-tight mb-1 group-hover:text-orange-600 transition-colors">{admin.name}</h3>
+                                     <div key={admin.id} className="anim-tab-item p-8 border border-gray-200 rounded-3xl bg-white hover:border-black transition-all hover:shadow-lg flex flex-col justify-between h-auto min-h-[160px] group">
+                                         <div className="mb-4">
+                                             <h3 className="text-2xl font-bold tracking-tight mb-1 group-hover:text-orange-600 transition-colors break-words">{admin.name}</h3>
                                              <div className="flex items-center gap-2 text-gray-400 font-medium">
-                                                 <span>{admin.rollNo}</span>
+                                                 <span className="truncate">{admin.rollNo}</span>
                                              </div>
                                          </div>
-                                         <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-2">
+                                         <div className="flex flex-col md:flex-row md:items-center justify-between border-t border-gray-100 pt-4 mt-2 gap-2 md:gap-0">
                                              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">LAST LOGIN</span>
                                              <span className="text-sm font-bold text-black">{admin.lastLogin}</span>
                                          </div>
