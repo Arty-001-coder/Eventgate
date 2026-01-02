@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useRef, use } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useRef, use, useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import eventsData from '../../admin/events.json';
 import { Calendar, Users, Bell, ChevronLeft, Plus, FileText, LogOut } from 'lucide-react';
+
+import { useSocket } from '../../../hooks/useSocket';
 
 const NUM_ORANGE_DOTS = 27;
 
@@ -21,11 +23,45 @@ type EventLog = {
   notification?: string | null;
 };
 
-export default function ClubPage({ params }: { params: Promise<{ id: string }> }) {
+function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const resolvedParams = use(params);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dots, setDots] = React.useState<{id: number, isOrange: boolean}[]>([]);
+  const { status, sendMessage, lastMessage } = useSocket();
+  const [clubName, setClubName] = React.useState<string>("");
+  
+  // Get roll number from URL params or localStorage, default to "XXXXX"
+  const [memberRollNo, setMemberRollNo] = useState<string>('XXXXX');
+  
+  useEffect(() => {
+    const rollNoFromUrl = searchParams.get('roll_no');
+    const rollNoFromStorage = localStorage.getItem('club_roll_no');
+    
+    if (rollNoFromUrl) {
+      setMemberRollNo(rollNoFromUrl);
+      // Also store in localStorage for persistence
+      localStorage.setItem('club_roll_no', rollNoFromUrl);
+    } else if (rollNoFromStorage) {
+      setMemberRollNo(rollNoFromStorage);
+    } else {
+      setMemberRollNo('XXXXX');
+    }
+  }, [searchParams]);
+
+  React.useEffect(() => {
+      if (status === 'connected') {
+          sendMessage({ kind: 'Get_Club_Details', club_id: resolvedParams.id });
+      }
+  }, [status, resolvedParams.id, sendMessage]);
+
+  React.useEffect(() => {
+      if (lastMessage && lastMessage.kind === 'Club_Details') {
+          setClubName((lastMessage as unknown as { club_name: string }).club_name);
+      }
+  }, [lastMessage]);
+
   
   // Form state
   const [formData, setFormData] = React.useState({
@@ -261,11 +297,11 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
           <div className="flex items-center gap-3 md:gap-8">
               {/* Roll Number */}
               <div className="px-3 py-1.5 md:px-5 md:py-2 bg-white rounded-full text-[10px] md:text-xs font-bold font-mono tracking-widest text-black">
-                  IMS22415
+                  {memberRollNo}
               </div>
               {/* Club Name */}
               <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white uppercase">
-                  {resolvedParams.id}
+                  {clubName || resolvedParams.id}
               </h1>
           </div>
 
@@ -530,5 +566,17 @@ export default function ClubPage({ params }: { params: Promise<{ id: string }> }
       </main>
 
     </div>
+  );
+}
+
+export default function ClubPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    }>
+      <ClubPageContent params={params} />
+    </Suspense>
   );
 }

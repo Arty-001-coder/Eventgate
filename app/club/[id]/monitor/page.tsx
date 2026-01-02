@@ -1,21 +1,95 @@
 "use client";
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { Shield, Users, UserPlus, Check, X, Lock, ChevronLeft } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import eventsData from '../../../admin/events.json';
+import { useSocket } from '../../../../hooks/useSocket';
 
 const NUM_ORANGE_DOTS = 27;
 
 gsap.registerPlugin(useGSAP);
 
+// Types
+interface AuthorizedUser {
+    id: string;
+    name: string;
+    roll: string;
+    lastLogin: number;
+    online: boolean;
+}
+
+interface JoinRequest {
+    id: string;
+    name: string;
+    roll: string;
+    timestamp: number;
+}
+
+interface MonitorData {
+    authorizedUsers: AuthorizedUser[];
+    joinRequests: JoinRequest[];
+}
+
+const defaultMonitorData: MonitorData = { authorizedUsers: [], joinRequests: [] };
+
 export default function ClubMonitorPage() {
   const router = useRouter();
   const params = useParams();
+  const clubId = params.id as string;
   const containerRef = useRef<HTMLDivElement>(null);
+
   const [dots, setDots] = React.useState<{id: number, isOrange: boolean}[]>([]);
+
+  // Socket State
+  const { sendMessage, lastMessage, status } = useSocket();
+  
+  // Derive state from lastMessage using useMemo to avoid cascading renders
+  const monitorData = useMemo<MonitorData>(() => {
+      if (lastMessage && lastMessage.kind === 'Monitor_State' && lastMessage.data) {
+          return lastMessage.data as unknown as MonitorData;
+      }
+      return defaultMonitorData;
+  }, [lastMessage]);
+
+  // Time Ago Helper
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    // Initial update (async to satisfy linter)
+    setTimeout(() => setNow(Date.now()), 0);
+    
+    // Interval update
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const timeAgo = React.useCallback((timestamp: number) => {
+    if (now === 0 || !timestamp) return "";
+    const seconds = Math.floor((now - timestamp) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hrs ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " mins ago";
+    return Math.floor(seconds) + " seconds ago";
+  }, [now]);
+
+  // Socket Subscription & Data Handling
+  useEffect(() => {
+     if (status === 'connected' && clubId) {
+         console.log("🔌 Subscribing to Monitor updates for:", clubId);
+         sendMessage({ kind: 'Monitor_Subscribe', club_id: clubId });
+     }
+  }, [status, clubId, sendMessage]);
+
+
+
   
   // Auth State
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
@@ -64,7 +138,18 @@ export default function ClubMonitorPage() {
       }
   };
 
-  const onlineCount = eventsData.clubUsers ? eventsData.clubUsers.filter(u => u.online).length : 0;
+  const handleAccept = (req: JoinRequest) => {
+      console.log(`✅ Approving request: ${req.id}`);
+      sendMessage({ kind: 'Club_joining_Accepted', request_id: req.id });
+  };
+
+  const handleReject = (req: JoinRequest) => {
+      console.log(`❌ Rejecting request: ${req.id}`);
+      sendMessage({ kind: 'Club_joining_Rejected', request_id: req.id });
+  };
+
+
+  const onlineCount = monitorData.authorizedUsers.filter(u => u.online).length;
 
   return (
     <div ref={containerRef} className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden font-sans">
@@ -115,9 +200,9 @@ export default function ClubMonitorPage() {
           </div>
       ) : (
           // DASHBOARD
-          <div className="flex-1 flex flex-col relative z-10">
+          <div className="flex-1 flex flex-col relative z-10 min-h-0 overflow-hidden">
               {/* Header */}
-              <header className="anim-dashboard w-full px-4 py-4 md:px-8 md:py-6 border-b border-white/10">
+              <header className="shrink-0 anim-dashboard w-full px-4 py-4 md:px-8 md:py-6 border-b border-white/10">
                   <div className="flex items-center gap-4">
                       <button 
                           onClick={() => router.push(`/club/${params.id}`)}
@@ -133,7 +218,7 @@ export default function ClubMonitorPage() {
               <main className="flex-1 grid grid-cols-1 lg:grid-cols-2">
                   
                   {/* LEFT: Authorized Users */}
-                  <div className="p-4 md:p-12 border-b md:border-b-0 md:border-r border-white/10 overflow-y-auto">
+                  <section className="p-4 md:p-12 border-b md:border-b-0 md:border-r border-white/10">
                       <div className="anim-dashboard mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <h2 className="text-xl md:text-2xl font-bold flex flex-wrap items-center gap-3">
                               <Users className="text-gray-400" size={24} />
@@ -149,72 +234,82 @@ export default function ClubMonitorPage() {
                               </div>
                           </h2>
                           <span className="text-xs font-mono text-gray-500 px-2 py-1 bg-white/5 rounded">
-                              {eventsData.clubUsers?.length || 0} TOTAL
+                              {monitorData.authorizedUsers.length} TOTAL
                           </span>
                       </div>
 
-                      <div className="space-y-4">
-                          {eventsData.clubUsers?.map((user) => (
-                              <div key={user.id} className="anim-dashboard flex items-center justify-between p-4 bg-black border border-white/20 rounded-xl hover:border-white/40 transition-colors group">
-                                  <div className="flex items-center gap-4">
-                                      <div className={`w-2 h-2 rounded-full ${user.online ? 'bg-orange-600 shadow-[0_0_8px_rgba(234,88,12,0.6)]' : 'bg-gray-600'}`}></div>
-                                      <div>
-                                          <h3 className="font-bold text-lg group-hover:text-orange-500 transition-colors">{user.name}</h3>
-                                          <p className="text-xs text-gray-400 uppercase tracking-wider">{user.lastLogin}</p>
+                      {/* Scrollable Container - explicit height */}
+                      <div className="max-h-[calc(100vh-280px)] overflow-y-auto custom-scrollbar">
+                          <div className="space-y-4 pr-2">
+                              {monitorData.authorizedUsers.map((user) => (
+                                  <div key={user.id} className="anim-dashboard flex items-center justify-between p-4 bg-black border border-white/20 rounded-xl hover:border-white/40 transition-colors group">
+                                      <div className="flex items-center gap-4">
+                                          <div className={`w-2 h-2 rounded-full ${user.online ? 'bg-orange-600 shadow-[0_0_8px_rgba(234,88,12,0.6)]' : 'bg-gray-600'}`}></div>
+                                          <div>
+                                              <h3 className="font-bold text-lg group-hover:text-orange-500 transition-colors">{user.name}</h3>
+                                              <p className="text-xs text-gray-400 uppercase tracking-wider">{user.roll} • {timeAgo(user.lastLogin)}</p>
+                                          </div>
                                       </div>
+                                      {user.online && (
+                                          <span className="text-[10px] font-bold bg-orange-600 text-white px-2 py-1 rounded">
+                                              ONLINE
+                                          </span>
+                                      )}
                                   </div>
-                                  {user.online && (
-                                      <span className="text-[10px] font-bold bg-orange-600 text-white px-2 py-1 rounded">
-                                          ONLINE
-                                      </span>
-                                  )}
-                              </div>
-                          ))}
+                              ))}
+                          </div>
                       </div>
-                  </div>
+                  </section>
 
                   {/* RIGHT: Join Requests */}
-                  <div className="p-4 md:p-12 bg-white/5 h-full overflow-y-auto">
+                  <section className="p-4 md:p-12 bg-white/5">
                       <div className="anim-dashboard mb-6 md:mb-8 flex items-center justify-between">
                           <h2 className="text-xl md:text-2xl font-bold flex items-center gap-3">
                               <UserPlus className="text-gray-400" size={24} />
                               PENDING REQUESTS
                           </h2>
                           <span className="text-xs font-mono text-orange-500 px-2 py-1 bg-orange-500/10 rounded border border-orange-500/20">
-                              {eventsData.joinRequests?.length || 0} PENDING
+                              {monitorData.joinRequests.length} PENDING
                           </span>
                       </div>
 
-                      <div className="space-y-4">
-                          {eventsData.joinRequests?.length > 0 ? (
-                              eventsData.joinRequests.map((req) => (
-                                  <div key={req.id} className="anim-dashboard p-6 bg-black border border-white/20 rounded-xl hover:border-orange-500/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                      <div>
-                                          <h3 className="font-bold text-xl mb-1">{req.name}</h3>
-                                          <div className="flex items-center gap-4 text-xs text-gray-400 font-mono">
-                                              <span>{req.roll}</span>
-                                              <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
-                                              <span>{req.timestamp}</span>
+                      {/* Scrollable Container - explicit height */}
+                      <div className="max-h-[calc(100vh-280px)] overflow-y-auto custom-scrollbar">
+                          <div className="space-y-4 pr-2">
+                              {monitorData.joinRequests.length > 0 ? (
+                                  monitorData.joinRequests.map((req) => (
+                                      <div key={req.id} className="anim-dashboard p-6 bg-black border border-white/20 rounded-xl hover:border-orange-500/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                          <div>
+                                              <h3 className="font-bold text-xl mb-1">{req.name}</h3>
+                                              <div className="flex items-center gap-4 text-xs text-gray-400 font-mono">
+                                                  <span>{req.roll}</span>
+                                                  <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
+                                                  <span>{timeAgo(req.timestamp)}</span>
+                                              </div>
+                                          </div>
+                                          
+                                          <div className="flex items-center gap-3">
+                                              <button 
+                                                  onClick={() => handleAccept(req)}
+                                                  className="flex-1 sm:flex-none p-3 bg-white text-black rounded-lg hover:bg-gray-200 transition-colors font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2">
+                                                  <Check size={16} /> Approve
+                                              </button>
+                                              <button 
+                                                  onClick={() => handleReject(req)}
+                                                  className="flex-1 sm:flex-none p-3 bg-black border border-white/30 text-white rounded-lg hover:bg-red-900/20 hover:border-red-500 hover:text-red-500 transition-colors font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2">
+                                                  <X size={16} /> Reject
+                                              </button>
                                           </div>
                                       </div>
-                                      
-                                      <div className="flex items-center gap-3">
-                                          <button className="flex-1 sm:flex-none p-3 bg-white text-black rounded-lg hover:bg-gray-200 transition-colors font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2">
-                                              <Check size={16} /> Approve
-                                          </button>
-                                          <button className="flex-1 sm:flex-none p-3 bg-black border border-white/30 text-white rounded-lg hover:bg-red-900/20 hover:border-red-500 hover:text-red-500 transition-colors font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2">
-                                              <X size={16} /> Reject
-                                          </button>
-                                      </div>
+                                  ))
+                              ) : (
+                                  <div className="p-8 border border-dashed border-white/10 rounded-xl text-center text-gray-500 anim-dashboard">
+                                      No pending requests
                                   </div>
-                              ))
-                          ) : (
-                              <div className="p-8 border border-dashed border-white/10 rounded-xl text-center text-gray-500 anim-dashboard">
-                                  No pending requests
-                              </div>
-                          )}
+                              )}
+                          </div>
                       </div>
-                  </div>
+                  </section>
 
               </main>
           </div>

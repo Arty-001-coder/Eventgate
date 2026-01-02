@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import eventsData from '../../admin/events.json';
+import { useSocket } from '../../../hooks/useSocket';
 import { Calendar as CalendarIcon, MapPin, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 
 const NUM_ORANGE_DOTS = 27;
@@ -14,9 +14,36 @@ export default function CalendarPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   
   // State for Navigation
-  const [currentDate, setCurrentDate] = React.useState(new Date(2024, 9, 15)); // Start at Oct 2024
-  const [selectedDay, setSelectedDay] = React.useState<number>(15);
+  const [currentDate, setCurrentDate] = React.useState(new Date()); // Start at current date
+  const [selectedDay, setSelectedDay] = React.useState<number>(new Date().getDate());
   const [dots, setDots] = React.useState<{id: number, isOrange: boolean}[]>([]);
+
+  // Socket Integration
+  const { status, sendMessage, lastMessage } = useSocket();
+  
+  interface CalendarEvent {
+        club_name: string;
+        event_name: string;
+        event_date: string; // YYYY-MM-DD
+        event_starttime: string;
+        event_endtime: string;
+        event_description: string;
+        event_venue: string;
+  }
+  
+  const [events, setEvents] = React.useState<CalendarEvent[]>([]);
+
+  React.useEffect(() => {
+    if (status === 'connected') {
+        sendMessage({ kind: 'Get_Calendar_Events' });
+    }
+  }, [status, sendMessage]);
+
+  React.useEffect(() => {
+    if (lastMessage && lastMessage.kind === 'Calendar_Events_List') {
+        setEvents((lastMessage as unknown as { events: CalendarEvent[] }).events);
+    }
+  }, [lastMessage]);
 
   // Background Dots Effect
   React.useEffect(() => {
@@ -82,18 +109,16 @@ export default function CalendarPage() {
       setCurrentDate(new Date(year, month + 1, 1));
       setSelectedDay(1); // Reset selection
   };
-
+  
   // Filter Events
-  // Assuming "Oct 15" format. We need to match Month Name and Day.
-  // Ideally, JSON dates should be ISO. But we work with "Oct 15".
-  const filteredEvents = eventsData.rolledEvents.filter(e => {
-      const [eMonth, eDay] = e.date.split(' '); // ["Oct", "15"]
-      // Simple case-insensitive match for demo: "Oct" vs "OCT"
-      const isSameMonth = eMonth.toUpperCase().startsWith(currentMonthName); 
-      // Note: "SEPT" vs "SEP" might be an issue, stick to 3 chars for now or robust parsing
-      // Let's assume JSON matches standard 3-char months for simplicity
-      
-      return isSameMonth && parseInt(eDay) === selectedDay;
+  const filteredEvents = events.filter(e => {
+      if (!e.event_date) return false;
+      // Correction: Date parsing might depend on timezone if string is plain YYYY-MM-DD.
+      // E.g. "2024-10-15" parsed as UTC might be 14th in local.
+      // Let's parse strictly or construct local date.
+      // "2024-10-15" -> split
+      const [y, m, day] = e.event_date.split('-').map(Number);
+      return y === year && (m - 1) === month && day === selectedDay;
   });
 
   return (
@@ -158,11 +183,12 @@ export default function CalendarPage() {
                      {/* Dates */}
                      {days.map(day => {
                          const isActive = day === selectedDay;
-                         // Check if events exist for this day in CURRENT month
-                         const hasEvents = eventsData.rolledEvents.some(e => {
-                             const [eMonth, eDay] = e.date.split(' ');
-                             return eMonth.toUpperCase().startsWith(currentMonthName) && parseInt(eDay) === day;
-                         });
+                          // Check if events exist for this day in CURRENT month
+                          const hasEvents = events.some(e => {
+                              if (!e.event_date) return false;
+                              const [y, m, d] = e.event_date.split('-').map(Number);
+                              return y === year && (m - 1) === month && d === day;
+                          });
 
                          return (
                              <button 
@@ -196,29 +222,29 @@ export default function CalendarPage() {
 
                <div className="flex-1 overflow-y-auto pr-4 space-y-6 custom-scrollbar pb-20">
                    {filteredEvents.length > 0 ? (
-                       filteredEvents.map((event) => (
-                           <div key={event.id} className="anim-event-card p-6 bg-black border border-white rounded-xl hover:border-orange-600 transition-colors group">
+                       filteredEvents.map((event, i) => (
+                           <div key={i} className="anim-event-card p-6 bg-black border border-white rounded-xl hover:border-orange-600 transition-colors group">
                                 <div className="flex justify-between items-start mb-4">
                                     <span className="text-3xl font-bold text-orange-600 uppercase">
-                                        {event.club}
+                                        {event.club_name}
                                     </span>
                                      <span className="text-3xl font-bold tracking-tighter text-white flex items-center gap-2">
-                                         {event.time} <ArrowRight className="text-orange-600" size={24} strokeWidth={3} /> {event.endTime}
+                                         {event.event_starttime} <ArrowRight className="text-orange-600" size={24} strokeWidth={3} /> {event.event_endtime}
                                      </span>
                                 </div>
                                 
                                 <h3 className="text-2xl font-bold mb-2 group-hover:text-orange-500 transition-colors">
-                                    {event.event}
+                                    {event.event_name}
                                 </h3>
                                 
                                 <p className="text-gray-400 text-sm mb-6 line-clamp-2">
-                                    {event.desc}
+                                    {event.event_description}
                                 </p>
 
                                 <div className="flex items-center gap-6 text-xs font-bold tracking-wide text-gray-300">
                                     <div className="flex items-center gap-2">
                                         <MapPin size={14} className="text-orange-600" />
-                                        {event.venue}
+                                        {event.event_venue}
                                     </div>
                                 </div>
                            </div>
