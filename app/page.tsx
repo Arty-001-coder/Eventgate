@@ -95,13 +95,16 @@ export default function Page() {
           }
           // Club Join Responses
           if (lastMessage.kind === 'Access_Granted') {
-               const accessData = lastMessage as unknown as { name?: string, club_id?: string, roll_no?: string };
+               const accessData = lastMessage as unknown as { name?: string, club_id?: string, roll_no?: string, member_id?: string };
                toast.success(`Welcome, ${accessData.name}!`);
                // Store roll number in localStorage and pass via URL
-               if (accessData.roll_no) {
-                   localStorage.setItem('club_roll_no', accessData.roll_no);
-                   setTimeout(() => router.push(`/club/${accessData.club_id}?roll_no=${accessData.roll_no}`), 500);
-               } else {
+                if (accessData.roll_no) {
+                    localStorage.setItem('club_roll_no', accessData.roll_no);
+                    if (accessData.member_id) {
+                        localStorage.setItem('member_id', accessData.member_id);
+                    }
+                    setTimeout(() => router.push(`/club/${accessData.club_id}?roll_no=${accessData.roll_no}`), 500);
+                } else {
                    setTimeout(() => router.push(`/club/${accessData.club_id}`), 500);
                }
           }

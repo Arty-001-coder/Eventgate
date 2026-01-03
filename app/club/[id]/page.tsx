@@ -3,9 +3,9 @@
 import React, { useRef, use, useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import gsap from 'gsap';
+import { v4 as uuidv4 } from 'uuid';
 import { useGSAP } from '@gsap/react';
-import eventsData from '../../admin/events.json';
-import { Calendar, Users, Bell, ChevronLeft, Plus, FileText, LogOut } from 'lucide-react';
+import { Calendar, Users, Bell, ChevronLeft, Plus, FileText, LogOut, Clock, MapPin, ArrowRight, Trash2 } from 'lucide-react';
 
 import { useSocket } from '../../../hooks/useSocket';
 
@@ -14,14 +14,34 @@ const NUM_ORANGE_DOTS = 27;
 gsap.registerPlugin(useGSAP);
 
 type EventLog = {
-  id: number;
+  id: string; // Changed to string for UUID
   eventName: string;
   description: string;
   date: string;
   time: string;
+  endTime: string; // Added endTime
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   notification?: string | null;
+  venue: string; // Added venue
 };
+
+interface EventAcceptedMsg { kind: 'Event_Accepted'; event_id: string; club_id: string; }
+interface EventRejectedMsg { kind: 'Event_Rejected'; event_id: string; club_id: string; message: string; }
+interface EventNotificationMsg { kind: 'Event_Notification'; event_id: string; club_id: string; message: string; }
+
+interface EventData {
+    event_name?: string;
+    event_description?: string;
+    event_date?: string;
+    event_start_time?: string;
+    event_end_time?: string;
+    event_venue?: string;
+}
+
+interface RawServerEvent { event_id: string; event_data: EventData; status: string; }
+interface ClubEventsMsg { kind: 'Club_Events_List'; events: RawServerEvent[]; }
+interface ClubDetailsMsg { kind: 'Club_Details'; club_name: string; }
+
 
 function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -32,23 +52,59 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
   const { status, sendMessage, lastMessage } = useSocket();
   const [clubName, setClubName] = React.useState<string>("");
   
-  // Get roll number from URL params or localStorage, default to "XXXXX"
+  // Get roll number and member ID from URL params or localStorage
   const [memberRollNo, setMemberRollNo] = useState<string>('XXXXX');
+  const [memberId, setMemberId] = useState<string>('');
   
   useEffect(() => {
     const rollNoFromUrl = searchParams.get('roll_no');
     const rollNoFromStorage = localStorage.getItem('club_roll_no');
+    const memberIdFromStorage = localStorage.getItem('member_id');
     
     if (rollNoFromUrl) {
       setMemberRollNo(rollNoFromUrl);
-      // Also store in localStorage for persistence
       localStorage.setItem('club_roll_no', rollNoFromUrl);
     } else if (rollNoFromStorage) {
       setMemberRollNo(rollNoFromStorage);
     } else {
       setMemberRollNo('XXXXX');
     }
+
+    if (memberIdFromStorage) {
+        setMemberId(memberIdFromStorage);
+    }
   }, [searchParams]);
+
+    // Format date from YYYY-MM-DD to "Oct 15" format
+    const formatDate = (dateString: string): string => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        return `${monthNames[date.getMonth()]} ${date.getDate()}`;
+    };
+
+    // Format time from HH:MM to "10:00 AM" format
+    const formatTime = (timeString: string): string => {
+        if (!timeString) return '';
+        const [hours, minutes] = timeString.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return `${displayHour}:${minutes} ${ampm}`;
+    };
+
+    // Logout Handler
+    const handleLogout = () => {
+        if (memberId) {
+            sendMessage({
+                kind: 'Member_Logout',
+                club_id: resolvedParams.id,
+                member_id: memberId
+            });
+        }
+        // Clear local storage logic if needed, or just redirect
+        router.push('/');
+    };
 
   React.useEffect(() => {
       if (status === 'connected') {
@@ -57,9 +113,10 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
   }, [status, resolvedParams.id, sendMessage]);
 
   React.useEffect(() => {
-      if (lastMessage && lastMessage.kind === 'Club_Details') {
-          setClubName((lastMessage as unknown as { club_name: string }).club_name);
-      }
+    if (lastMessage && lastMessage.kind === 'Club_Details') {
+        const msg = lastMessage as unknown as ClubDetailsMsg;
+        setClubName(msg.club_name);
+    }
   }, [lastMessage]);
 
   
@@ -69,15 +126,98 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
     startTime: '',
     endTime: '',
     date: '',
-    description: ''
+    description: '',
+    venue: ''
   });
   
-  // Event logs state - initialize from events.json
-  const [eventLogs, setEventLogs] = React.useState<EventLog[]>(() => {
-    return (eventsData.eventLogs || []) as EventLog[];
-  });
-  
-  const [nextEventId, setNextEventId] = React.useState(13);
+  // Event logs state - initialize empty, waiting for server data
+  const [eventLogs, setEventLogs] = React.useState<EventLog[]>([]);
+
+  // Notification State { eventId: { message, timestamp } }
+  const [notifications, setNotifications] = useState<Record<string, { message: string, timestamp: number }>>({});
+
+  // 1. Load Notifications from Local Storage on Mount & Prune Old
+  useEffect(() => {
+      const stored = localStorage.getItem(`club_notifications_${resolvedParams.id}`);
+      if (stored) {
+          try {
+              const parsed = JSON.parse(stored);
+              const now = Date.now();
+              const filtered: Record<string, { message: string, timestamp: number }> = {};
+              
+              Object.entries(parsed).forEach(([eventId, data]) => {
+                  const notifData = data as { message: string, timestamp: number }; // Assertion for safety
+                  if (now - notifData.timestamp < 24 * 60 * 60 * 1000) { // 24 hours
+                      filtered[eventId] = notifData;
+                  }
+              });
+              setNotifications(filtered);
+          } catch (e) {
+              console.error("Failed to parse notifications", e);
+          }
+      }
+  }, [resolvedParams.id]);
+
+  // 2. Helper to update notifications persistently
+  const updateNotification = React.useCallback((eventId: string, message: string) => {
+      setNotifications((prev) => {
+          const updated = { ...prev, [eventId]: { message, timestamp: Date.now() } };
+          localStorage.setItem(`club_notifications_${resolvedParams.id}`, JSON.stringify(updated));
+          return updated;
+      });
+  }, [resolvedParams.id]);
+
+  // 3. Listen for Real-time Updates (Accepted, Rejected, Notification)
+  useEffect(() => {
+      if (!lastMessage) return;
+
+      if (lastMessage.kind === 'Event_Accepted') {
+           const msg = lastMessage as unknown as EventAcceptedMsg;
+           setEventLogs(prev => prev.map(evt => 
+               evt.id === msg.event_id ? { ...evt, status: 'APPROVED' } : evt
+           ));
+      } else if (lastMessage.kind === 'Event_Rejected') {
+           const msg = lastMessage as unknown as EventRejectedMsg;
+           if (msg.message) updateNotification(msg.event_id, msg.message);
+           
+           setEventLogs(prev => prev.map(evt => 
+               evt.id === msg.event_id ? { ...evt, status: 'REJECTED', notification: msg.message } : evt
+           ));
+      } else if (lastMessage.kind === 'Event_Notification') {
+           const msg = lastMessage as unknown as EventNotificationMsg;
+           if (msg.message) updateNotification(msg.event_id, msg.message);
+
+           setEventLogs(prev => prev.map(evt => 
+               evt.id === msg.event_id ? { ...evt, notification: msg.message } : evt
+           ));
+      }
+  }, [lastMessage, updateNotification]);
+
+  // Listen for Club_Events_List from server (Initial Logic Updated to Merge Notifications)
+  React.useEffect(() => {
+    if (lastMessage && lastMessage.kind === 'Club_Events_List') {
+       const msg = lastMessage as unknown as ClubEventsMsg;
+       if (Array.isArray(msg.events)) {
+           const mappedEvents: EventLog[] = msg.events.map((e) => {
+           const data = e.event_data || {};
+           const notifData = notifications[e.event_id];
+           
+           return {
+               id: e.event_id,
+               eventName: data.event_name || 'Unknown Event',
+               description: data.event_description || '', 
+               date: formatDate(data.event_date || ''),  
+               time: formatTime(data.event_start_time || ''),  
+                endTime: formatTime(data.event_end_time || ''), 
+                status: (e.status === 'accepted' ? 'APPROVED' : (e.status || 'pending').toUpperCase()) as 'PENDING' | 'APPROVED' | 'REJECTED',
+                notification: notifData ? notifData.message : null,
+                venue: data.event_venue || 'TBD' 
+            };
+       });
+       setEventLogs(mappedEvents);
+    }
+  }
+  }, [lastMessage, notifications]); // Re-run when notifications load/change to ensure sync
   const [activeMobileTab, setActiveMobileTab] = React.useState<'menu' | 'create' | 'logs'>('menu');
 
   React.useEffect(() => {
@@ -141,6 +281,20 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
 
   }, { scope: containerRef });
 
+  // Delete Handler
+  const handleDeleteEvent = (eventId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (confirm('Are you sure you want to delete this event? This cannot be undone.')) {
+          sendMessage({
+              kind: 'Event_Deleted',
+              club_id: resolvedParams.id,
+              event_id: eventId
+          });
+          // Optimistic UI update
+          setEventLogs(prev => prev.filter(evt => evt.id !== eventId));
+      }
+  };
+
   // Mobile Tab Animations
   useGSAP(() => {
     if (activeMobileTab === 'create') {
@@ -188,23 +342,6 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
     }
   }, { scope: containerRef, dependencies: [eventLogs.length] });
 
-  // Format date from YYYY-MM-DD to "Oct 15" format
-  const formatDate = (dateString: string): string => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-    return `${monthNames[date.getMonth()]} ${date.getDate()}`;
-  };
-
-  // Format time from HH:MM to "10:00 AM" format
-  const formatTime = (timeString: string): string => {
-    if (!timeString) return '';
-    const [hours, minutes] = timeString.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${minutes} ${ampm}`;
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -218,51 +355,51 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
     e.preventDefault();
     
     // Validate form
-    if (!formData.eventName || !formData.date || !formData.startTime || !formData.description) {
+    if (!formData.eventName || !formData.date || !formData.startTime || !formData.description || !formData.venue) {
       alert('Please fill in all required fields');
       return;
     }
 
-    // Create new event log
-    const newEvent: EventLog = {
-      id: nextEventId,
+    // Generate UUID
+    const newEventId = uuidv4();
+
+    // Prepare payload
+    const eventPayload = {
+        event_name: formData.eventName,
+        event_date: formData.date,
+        event_start_time: formData.startTime,
+        event_end_time: formData.endTime,
+        event_description: formData.description,
+        event_venue: formData.venue,
+        timestamp: Date.now()
+    };
+
+    // Optimistic Update (Optional, but good UX)
+    const newEventLog: EventLog = {
+      id: newEventId,
       eventName: formData.eventName,
       description: formData.description,
       date: formatDate(formData.date),
       time: formatTime(formData.startTime),
-      status: 'PENDING'
+      endTime: formatTime(formData.endTime),
+      status: 'PENDING',
+      venue: formData.venue
     };
+    setEventLogs(prev => [newEventLog, ...prev]);
 
-    // Add to local state immediately
-    setEventLogs(prev => [newEvent, ...prev]);
-    setNextEventId(prev => prev + 1);
-
-    // Prepare event data for API (for events.json)
-    const eventForAPI = {
-      id: nextEventId,
-      club: resolvedParams.id,
-      event: formData.eventName,
-      date: formatDate(formData.date),
-      time: formatTime(formData.startTime),
-      venue: 'TBD', // Default venue, can be added to form later
-      desc: formData.description
-    };
-
-    // Save to events.json via API
-    try {
-      const response = await fetch('/api/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventForAPI),
-      });
-
-      if (!response.ok) {
-        console.error('Failed to save event to events.json');
-      }
-    } catch (error) {
-      console.error('Error saving event:', error);
+    // Send to Server
+    if (status === 'connected') {
+        sendMessage({
+            kind: 'Event_Created',
+            club_id: resolvedParams.id,
+            event_id: newEventId,
+            event_data: eventPayload,
+            timestamp: Date.now()
+        });
+        // Also sync list just in case needed, but broadcast should handle it
+    } else {
+        alert("Not connected to server. Please try again.");
+        return;
     }
 
     // Reset form
@@ -271,7 +408,8 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
       startTime: '',
       endTime: '',
       date: '',
-      description: ''
+      description: '',
+      venue: ''
     });
   };
 
@@ -321,7 +459,7 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
 
               {/* Desktop Logout Button */}
               <button 
-                  onClick={() => router.push('/')}
+                  onClick={handleLogout}
                   className="hidden md:flex w-10 h-10 bg-white rounded-full items-center justify-center text-black hover:bg-gray-200 transition-colors"
                   title="Logout"
               >
@@ -371,7 +509,7 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
 
           {/* Mobile Logout Button */}
           <button 
-              onClick={() => router.push('/')}
+              onClick={handleLogout}
               className="w-full max-w-[400px] mx-auto py-4 bg-transparent border border-orange-600 rounded-2xl flex items-center justify-center gap-2 hover:bg-orange-600/10 active:scale-95 transition-all text-white font-bold tracking-widest"
           >
               <LogOut size={20} />
@@ -441,17 +579,31 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
                             </div>
                        </div>
 
-                       {/* Date */}
-                       <div className="anim-form group">
-                            <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest group-focus-within:text-orange-600 transition-colors">Date</label>
-                            <input 
-                                type="date" 
-                                name="date"
-                                value={formData.date}
-                                onChange={handleInputChange}
-                                required
-                                className="w-full bg-transparent border border-white rounded-xl px-4 py-3 md:border-b md:border-x-0 md:border-t-0 md:rounded-none md:px-0 text-xl focus:border-orange-600 outline-none transition-colors font-medium text-white [color-scheme:dark]"
-                            />
+                       {/* Date & Venue Row */}
+                       <div className="anim-form grid grid-cols-2 gap-8">
+                            <div className="group">
+                                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest group-focus-within:text-orange-600 transition-colors">Date</label>
+                                <input 
+                                    type="date" 
+                                    name="date"
+                                    value={formData.date}
+                                    onChange={handleInputChange}
+                                    required
+                                    className="w-full bg-transparent border border-white rounded-xl px-4 py-3 md:border-b md:border-x-0 md:border-t-0 md:rounded-none md:px-0 text-xl focus:border-orange-600 outline-none transition-colors font-medium text-white [color-scheme:dark]"
+                                />
+                            </div>
+                            <div className="group">
+                                <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest group-focus-within:text-orange-600 transition-colors">Venue</label>
+                                <input 
+                                    type="text" 
+                                    name="venue"
+                                    value={formData.venue}
+                                    onChange={handleInputChange}
+                                    placeholder="e.g. Main Auditorium"
+                                    required
+                                    className="w-full bg-transparent border border-white rounded-xl px-4 py-3 md:border-b md:border-x-0 md:border-t-0 md:rounded-none md:px-0 text-xl focus:border-orange-600 outline-none transition-colors font-medium text-white"
+                                />
+                            </div>
                        </div>
 
                        {/* Description */}
@@ -513,20 +665,12 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
                      {eventLogs.map((event, index) => (
                          <div key={event.id} className={`${index === 0 ? 'anim-new-event' : 'anim-logs'} p-6 bg-linear-to-br from-white/5 via-black to-white/5 rounded-2xl border border-white/5 hover:border-orange-600 transition-all group`}>
                              <div className="flex justify-between items-start mb-2">
-                                 <div className="flex items-center gap-3">
-                                     <h3 className="font-bold text-lg group-hover:text-orange-500 transition-colors">{event.eventName}</h3>
-                                     {event.notification && (
-                                       <button 
-                                         onClick={(e) => {
-                                            e.stopPropagation();
-                                            alert(`Notification: ${event.notification}`);
-                                         }}
-                                         className="p-1.5 bg-orange-600/10 rounded-full text-orange-600 hover:bg-orange-600 hover:text-white transition-colors"
-                                         title="View Notification"
-                                       >
-                                          <Bell size={14} />
-                                       </button>
-                                    )}
+                                 <div className="flex flex-col gap-1">
+                                     {/* Row 1: Name + Date */}
+                                     <div className="flex items-center gap-3">
+                                         <h3 className="font-bold text-lg group-hover:text-orange-500 transition-colors">{event.eventName}</h3>
+                                         <span className="text-orange-600 font-bold text-sm tracking-wide uppercase">{event.date}</span>
+                                     </div>
                                  </div>
                                  <div className="flex items-center gap-4">
                                      <span className={`px-3 py-1 rounded text-[10px] font-bold tracking-wider ${
@@ -538,14 +682,50 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
                                     </span>
                                   </div>
                              </div>
-                             <p className="text-gray-500 text-sm line-clamp-2 mb-4">
-                                 {event.description}
-                             </p>
-                             <div className="flex items-center gap-4 text-xs text-gray-400 font-mono">
-                                 <span>{event.date}</span>
-                                 <span>•</span>
-                                 <span>{event.time}</span>
-                             </div>
+                              {/* Row 2: Description + Notification */}
+                              <div className="mb-4 flex items-start gap-2">
+                                  <p className="text-gray-500 text-sm line-clamp-2">
+                                      {event.description}
+                                  </p>
+                                  {event.notification && (
+                                     <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                                         <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
+                                         <button 
+                                           onClick={(e) => {
+                                              e.stopPropagation();
+                                              alert(`${event.notification}`);
+                                           }}
+                                           className="text-orange-600 hover:text-white transition-colors"
+                                           title="View Notification"
+                                         >
+                                            <Bell size={14} />
+                                         </button>
+                                     </div>
+                                  )}
+                              </div>
+                              
+                              {/* Row 3: Time and Venue with Icons */}
+                              <div className="flex items-center gap-6 text-xs text-gray-400 font-mono border-t border-white/5 pt-3">
+                                  <div className="flex items-center gap-2">
+                                      <Clock size={14} className="text-orange-600" />
+                                      <span>{event.time}</span>
+                                      <ArrowRight size={12} />
+                                      <span>{event.endTime}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <MapPin size={14} className="text-orange-600" />
+                                      <span>{event.venue}</span>
+                                  </div>
+                                  
+                                  {/* Delete Button */}
+                                  <button 
+                                      onClick={(e) => handleDeleteEvent(event.id, e)}
+                                      className="ml-auto p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                                      title="Delete Event"
+                                  >
+                                      <Trash2 size={14} />
+                                  </button>
+                              </div>
                          </div>
                      ))}
                  </div>
@@ -570,6 +750,8 @@ function ClubPageContent({ params }: { params: Promise<{ id: string }> }) {
 }
 
 export default function ClubPage({ params }: { params: Promise<{ id: string }> }) {
+  // Delete Handler
+  
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-black text-white flex items-center justify-center">

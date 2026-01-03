@@ -98,7 +98,9 @@ function AdminDashboardContent() {
           // 1. Update Events
           if (Array.isArray(lastMessage.events)) {
               const serverEvents = lastMessage.events as unknown as ServerEventPayload[];
-              setEvents(serverEvents.map((e) => ({
+              setEvents(serverEvents
+                  .filter(e => e.status !== 'rejected')
+                  .map((e) => ({
                    id: e.event_id,
                    clubId: e.club_id,
                    club: e.club_name,

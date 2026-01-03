@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useMemo, useEffect } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { Shield, Users, UserPlus, Check, X, Lock, ChevronLeft } from 'lucide-react';
@@ -45,13 +46,58 @@ export default function ClubMonitorPage() {
   // Socket State
   const { sendMessage, lastMessage, status } = useSocket();
   
-  // Derive state from lastMessage using useMemo to avoid cascading renders
-  const monitorData = useMemo<MonitorData>(() => {
+  // State for data persistence
+  const [monitorData, setMonitorData] = useState<MonitorData>(defaultMonitorData);
+
+  // Auth State
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState(false);
+
+  // Background Dots Effect
+  React.useEffect(() => {
+    const TOTAL_DOTS = 400;
+    const orangeIndices = new Set<number>();
+    while(orangeIndices.size < NUM_ORANGE_DOTS) {
+        orangeIndices.add(Math.floor(Math.random() * TOTAL_DOTS));
+    }
+    const newDots = Array.from({ length: TOTAL_DOTS }).map((_, i) => ({
+        id: i,
+        isOrange: orangeIndices.has(i)
+    }));
+    setDots(newDots);
+  }, []);
+
+  // Update state only when valid Monitor_State is received
+  useEffect(() => {
       if (lastMessage && lastMessage.kind === 'Monitor_State' && lastMessage.data) {
-          return lastMessage.data as unknown as MonitorData;
+          setMonitorData(lastMessage.data as unknown as MonitorData);
       }
-      return defaultMonitorData;
   }, [lastMessage]);
+
+  // Listen for Validation Response
+  useEffect(() => {
+    if (lastMessage) {
+        if (lastMessage.kind === 'Club_Admin_Valid') {
+            setIsAuthenticated(true);
+            setError(false);
+        } else if (lastMessage.kind === 'Club_Admin_Invalid') {
+            setError(true);
+            toast.error("Invalid Admin Secret");
+             // Trigger shake animation
+             gsap.fromTo(".anim-shake", { x: -5 }, { x: 5, duration: 0.1, repeat: 5, yoyo: true, clearProps: "x" });
+        }
+    }
+  }, [lastMessage]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage({
+        kind: 'Validate_Club_Admin',
+        club_id: clubId,
+        secret: password
+    });
+  };
 
   // Time Ago Helper
   const [now, setNow] = useState(0);
@@ -81,35 +127,25 @@ export default function ClubMonitorPage() {
   }, [now]);
 
   // Socket Subscription & Data Handling
+  // Note: We authenticate for monitor access first, but socket subscription
+  // is now handled after successful admin check on backend, OR we can explicitly ask for it here.
+  // The backend handler handles validation. 
+  // Let's keep the explicit subscription for existing session if already valid, 
+  // OR rely on auth validation to trigger it.
+  // Actually, 'Monitor_Subscribe' is safe to call if we assume this page is protected.
+  // But strict auth means we should only get data if authorized.
+  // The backend 'Validate_Club_Admin' handler I wrote sends 'Monitor_Subscribe' internally? 
+  // Wait, I wrote: ctx.socket.send(JSON.stringify({ kind: "Monitor_Subscribe", club_id })); 
+  // That sends a message TO THE CLIENT to tell it to subscribe? No, that was confusing logic I wrote.
+  // It should be: The SERVER subscribes the socket. OR the client sends 'Monitor_Subscribe' after success.
+  
+  // Let's refine: Client receives 'Club_Admin_Valid' -> Client sends 'Monitor_Subscribe'.
   useEffect(() => {
-     if (status === 'connected' && clubId) {
+     if (isAuthenticated && status === 'connected' && clubId) {
          console.log("🔌 Subscribing to Monitor updates for:", clubId);
          sendMessage({ kind: 'Monitor_Subscribe', club_id: clubId });
      }
-  }, [status, clubId, sendMessage]);
-
-
-
-  
-  // Auth State
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-  const [password, setPassword] = React.useState('');
-  const [error, setError] = React.useState(false);
-  const correctPassword = "OneEclipse01"; // Hardcoded for simplified demo as requested
-
-  // Background Dots Effect
-  React.useEffect(() => {
-    const TOTAL_DOTS = 400;
-    const orangeIndices = new Set<number>();
-    while(orangeIndices.size < NUM_ORANGE_DOTS) {
-        orangeIndices.add(Math.floor(Math.random() * TOTAL_DOTS));
-    }
-    const newDots = Array.from({ length: TOTAL_DOTS }).map((_, i) => ({
-        id: i,
-        isOrange: orangeIndices.has(i)
-    }));
-    setDots(newDots);
-  }, []);
+  }, [isAuthenticated, status, clubId, sendMessage]);
 
   // Auth Animation
   useGSAP(() => {
@@ -127,16 +163,6 @@ export default function ClubMonitorPage() {
       }
   }, { dependencies: [isAuthenticated], scope: containerRef });
 
-  const handleLogin = (e: React.FormEvent) => {
-      e.preventDefault();
-      if(password === correctPassword) {
-          setIsAuthenticated(true);
-          setError(false);
-      } else {
-          setError(true);
-          gsap.fromTo(".anim-shake", { x: -5 }, { x: 5, duration: 0.1, repeat: 5, yoyo: true, clearProps: "x" });
-      }
-  };
 
   const handleAccept = (req: JoinRequest) => {
       console.log(`✅ Approving request: ${req.id}`);
@@ -153,7 +179,8 @@ export default function ClubMonitorPage() {
 
   return (
     <div ref={containerRef} className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden font-sans">
-      
+       <Toaster position="top-right" />
+       
        {/* Background Dots */}
        <div className="absolute inset-0 z-0 grid grid-cols-[repeat(auto-fill,minmax(40px,1fr))] gap-4 p-8 pointer-events-none opacity-40">
           {dots.map(dot => (
