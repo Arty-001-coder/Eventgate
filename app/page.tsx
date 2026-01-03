@@ -38,12 +38,14 @@ export default function Page() {
     councilId: '',
     clubName: '',
     clubSecret: '',
-    confirmSecret: ''
+    confirmSecret: '',
+    adminSecret: ''
   });
   const [showConfirmSecret, setShowConfirmSecret] = useState(false);
+  const [showAdminSecret, setShowAdminSecret] = useState(false);
 
   const handleCreateNext = () => {
-    if (createStep < 3) {
+    if (createStep < 4) {
       setCreateStep(prev => prev + 1);
     }
   };
@@ -133,7 +135,8 @@ export default function Page() {
                    councilId: '',
                    clubName: '',
                    clubSecret: '',
-                   confirmSecret: ''
+                   confirmSecret: '',
+                   adminSecret: ''
                  });
                }, 1500);
           }
@@ -164,8 +167,8 @@ export default function Page() {
       }
   }, [lastMessage, router, joinStatus]);
 
-  const handleCreateClubNetwork = () => {
-    if (!createData.creatorName || !createData.creatorIMS || !createData.councilId || !createData.clubName || !createData.clubSecret) {
+  const handleCreateClubRequest = () => {
+    if (!createData.creatorName || !createData.creatorIMS || !createData.councilId || !createData.clubName || !createData.clubSecret || !createData.adminSecret) {
       toast.error("Please fill all fields");
       return;
     }
@@ -181,6 +184,7 @@ export default function Page() {
       creator_name: createData.creatorName,
       creator_roll: createData.creatorIMS,
       club_secret: createData.clubSecret,
+      admin_secret: createData.adminSecret,
       timestamp: Date.now()
     });
     toast.loading("Sending creation request...", { duration: 2000 });
@@ -377,7 +381,8 @@ export default function Page() {
           councilId: '',
           clubName: '',
           clubSecret: '',
-          confirmSecret: ''
+          confirmSecret: '',
+          adminSecret: ''
         });
         setClubView('create');
     }
@@ -862,11 +867,49 @@ export default function Page() {
                                             BACK
                                         </button>
                                         <button 
-                                            onClick={handleCreateClubNetwork}
-                                            disabled={!createData.clubSecret || !createData.confirmSecret || createData.clubSecret !== createData.confirmSecret}
+                                            onClick={handleCreateNext}
+                                            disabled={!createData.clubSecret || createData.clubSecret !== createData.confirmSecret}
                                             className="w-2/3 py-3 bg-orange-600 border border-orange-600 rounded text-white shadow-[0_0_15px_rgba(234,88,12,0.5)] hover:shadow-[0_0_25px_rgba(234,88,12,0.8)] hover:bg-orange-500 transition-all duration-300 text-sm font-bold tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            GENERATE CREATION REQUEST
+                                            NEXT
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* STEP 4: Admin Secret */}
+                            {createStep === 4 && (
+                                <>
+                                    <div className="anim-form group relative">
+                                        <label className="block text-xs font-bold text-orange-500 mb-2 uppercase tracking-widest">Admin Access</label>
+                                        <input 
+                                            type={showAdminSecret ? "text" : "password"}
+                                            placeholder="Enter Admin Secret" 
+                                            value={createData.adminSecret || ''}
+                                            onChange={(e) => setCreateData({...createData, adminSecret: e.target.value})}
+                                            className="w-full bg-transparent border-b border-white py-2 text-lg focus:border-orange-500 outline-none transition-colors placeholder:text-gray-500 tracking-widest text-white"
+                                        />
+                                        <button 
+                                            onClick={() => setShowAdminSecret(!showAdminSecret)}
+                                            className="absolute right-2 top-8 text-gray-500 hover:text-white transition-colors"
+                                        >
+                                            {showAdminSecret ? <EyeOff size={20} /> : <Eye size={20} />}
+                                        </button>
+                                    </div>
+
+                                    <div className="anim-form pt-4 flex gap-4">
+                                        <button 
+                                            onClick={() => setCreateStep(3)}
+                                            className="w-1/3 py-3 border border-gray-500 rounded text-gray-300 hover:text-white hover:border-white transition-all duration-300 text-sm font-bold tracking-wide"
+                                        >
+                                            BACK
+                                        </button>
+                                        <button 
+                                            onClick={handleCreateClubRequest}
+                                            disabled={!createData.adminSecret}
+                                            className="w-2/3 py-3 bg-orange-600 border border-orange-600 rounded text-white shadow-[0_0_15px_rgba(234,88,12,0.5)] hover:shadow-[0_0_25px_rgba(234,88,12,0.8)] hover:bg-orange-500 transition-all duration-300 text-sm font-bold tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            REQUEST
                                         </button>
                                     </div>
                                 </>
