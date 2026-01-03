@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-// Change this to your Render backend URL
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+// Get backend URL from environment variables
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
 export default function KeepAlivePage() {
   const [status, setStatus] = useState<'idle' | 'pinging' | 'success' | 'error'>('idle');

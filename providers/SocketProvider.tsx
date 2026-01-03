@@ -19,7 +19,11 @@ const SocketContext = createContext<SocketContextType | null>(null);
 
 // Get WebSocket URL from environment or default to localhost:8080
 const getWebSocketURL = () => {
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+  // Use NEXT_PUBLIC_WS_URL if set, otherwise convert NEXT_PUBLIC_API_BASE_URL or fallback
+  if (process.env.NEXT_PUBLIC_WS_URL) {
+    return process.env.NEXT_PUBLIC_WS_URL;
+  }
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
   // Convert http:// to ws:// and https:// to wss://
   return backendUrl.replace(/^http/, 'ws');
 };
