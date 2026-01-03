@@ -17,7 +17,12 @@ interface SocketContextType {
 
 const SocketContext = createContext<SocketContextType | null>(null);
 
-const WS_URL = 'ws://localhost:8080';
+// Get WebSocket URL from environment or default to localhost:8080
+const getWebSocketURL = () => {
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+  // Convert http:// to ws:// and https:// to wss://
+  return backendUrl.replace(/^http/, 'ws');
+};
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
@@ -30,6 +35,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     const connect = () => {
       if (socketRef.current?.readyState === WebSocket.OPEN) return;
 
+      const WS_URL = getWebSocketURL();
       setStatus('connecting');
       // console.log(`🔌 Connecting to ${WS_URL}...`);
       
