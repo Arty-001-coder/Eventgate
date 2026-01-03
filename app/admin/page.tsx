@@ -21,7 +21,8 @@ interface AdminEvent {
     clubId: string; // Added clubId
     club: string;
     event: string;
-    date: string;
+    date: string; // Formatted date string for display
+    rawDate: Date; // Raw date for sorting
     time: string;
     endTime: string;
     venue: string;
@@ -98,22 +99,28 @@ function AdminDashboardContent() {
           // 1. Update Events
           if (Array.isArray(lastMessage.events)) {
               const serverEvents = lastMessage.events as unknown as ServerEventPayload[];
-              setEvents(serverEvents
+              const mappedEvents = serverEvents
                   .filter(e => e.status !== 'rejected')
-                  .map((e) => ({
-                   id: e.event_id,
-                   clubId: e.club_id,
-                   club: e.club_name,
-                   event: e.event_name,
-                   date: e.event_date 
-                      ? new Date(e.event_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                      : new Date(e.event_timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-                   time: e.event_start_time || "00:00",
-                   endTime: e.event_end_time || "00:00",
-                   venue: e.event_venue || "TBD",
-                   desc: e.event_description || "",
-                   status: e.status
-              })));
+                  .map((e) => {
+                      const rawDate = e.event_date 
+                          ? new Date(e.event_date)
+                          : new Date(e.event_timestamp);
+                      return {
+                       id: e.event_id,
+                       clubId: e.club_id,
+                       club: e.club_name,
+                       event: e.event_name,
+                       date: rawDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+                       rawDate: rawDate,
+                       time: e.event_start_time || "00:00",
+                       endTime: e.event_end_time || "00:00",
+                       venue: e.event_venue || "TBD",
+                       desc: e.event_description || "",
+                       status: e.status
+                      };
+                  })
+                  .sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime()); // Sort by date ascending
+              setEvents(mappedEvents);
           }
           // 2. Update Auth Requests
           if ('authRequests' in lastMessage && Array.isArray(lastMessage.authRequests)) {
@@ -129,9 +136,9 @@ function AdminDashboardContent() {
       }
   }, [lastMessage]);
 
-  // Group events by date
+  // Group events by date and sort groups chronologically
   const groupedEvents = React.useMemo(() => {
-    return events.reduce((acc, event) => {
+    const grouped = events.reduce((acc, event) => {
       const dateKey = event.date;
       if (!acc[dateKey]) {
         acc[dateKey] = [];
@@ -139,6 +146,16 @@ function AdminDashboardContent() {
       acc[dateKey].push(event);
       return acc;
     }, {} as Record<string, AdminEvent[]>);
+    
+    // Sort the groups by the earliest event date in each group
+    const sortedEntries = Object.entries(grouped).sort(([dateA, eventsA], [dateB, eventsB]) => {
+      const earliestDateA = Math.min(...eventsA.map(e => e.rawDate.getTime()));
+      const earliestDateB = Math.min(...eventsB.map(e => e.rawDate.getTime()));
+      return earliestDateA - earliestDateB;
+    });
+    
+    // Convert back to object with sorted order
+    return Object.fromEntries(sortedEntries);
   }, [events]);
 
   React.useEffect(() => {
